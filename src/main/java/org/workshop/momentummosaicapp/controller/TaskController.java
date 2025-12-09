@@ -1,10 +1,13 @@
 package org.workshop.momentummosaicapp.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.workshop.momentummosaicapp.task.Task;
-import org.workshop.momentummosaicapp.task.TaskRequest;
 import org.workshop.momentummosaicapp.task.TaskService;
+import org.workshop.momentummosaicapp.task.dto.TaskRequest;
+import org.workshop.momentummosaicapp.task.dto.TaskResponse;
+import org.workshop.momentummosaicapp.utility.DtoMapper;
 
 import java.util.List;
 
@@ -12,35 +15,47 @@ import java.util.List;
 @RequestMapping("/api/tasks")
 @RequiredArgsConstructor
 public class TaskController {
+
     private final TaskService taskService;
+    private final DtoMapper dtoMapper;
+
     @PostMapping("/{userId}")
-    public Task createTask(@PathVariable Long userId, @RequestBody TaskRequest request){
-        return null;
+    public TaskResponse createTask(@PathVariable Long userId, @RequestBody @Valid TaskRequest request){
+        Task task = taskService.createTask(request.getTitle(),userId,request.getTaskType(),request.getDurationMinutes());
+        return dtoMapper.taskToTaskResponse(task);
     }
     @PutMapping("/{userId}/{taskId}")
-    public Task updateTask(
+    public TaskResponse updateTask(
             @PathVariable Long userId,
             @PathVariable Long taskId,
-            @RequestBody TaskRequest request){
-        return null;
+            @RequestBody @Valid TaskRequest request){
+
+        Task task = taskService.updateTask(userId,taskId,request.getTitle(),request.getTaskType(),request.getDurationMinutes());
+        return dtoMapper.taskToTaskResponse(task);
     }
     @DeleteMapping("/{userId}/{taskId}")
     public void deleteTask(@PathVariable Long userId,
-                           @PathVariable Long taskId){}
+                           @PathVariable Long taskId){
+        taskService.deleteTask(userId,taskId);
+    }
 
     @PutMapping("/{userId}/{taskId}/complete")
-    public Task completeTask(@PathVariable Long userId,
+    public TaskResponse completeTask(@PathVariable Long userId,
                              @PathVariable Long taskId){
-        return null;
+        Task task = taskService.completeTask(userId,taskId);
+        return dtoMapper.taskToTaskResponse(task);
     }
 
     @GetMapping("/active/{userId}")
-    public List<Task> getActiveTasks(@PathVariable Long userId){
-        return null;
+    public List<TaskResponse> getActiveTasks(@PathVariable Long userId){
+        List<Task> tasks = taskService.getActiveTasks(userId);
+
+        return tasks.stream().map(dtoMapper::taskToTaskResponse).toList();
     }
 
     @GetMapping("/completed/{userId}")
-    public List<Task> getCompletedTasks(@PathVariable Long userId){
-        return null;
+    public List<TaskResponse> getCompletedTasks(@PathVariable Long userId){
+        List<Task> tasks = taskService.getCompletedTasks(userId);
+        return tasks.stream().map(dtoMapper::taskToTaskResponse).toList();
     }
 }

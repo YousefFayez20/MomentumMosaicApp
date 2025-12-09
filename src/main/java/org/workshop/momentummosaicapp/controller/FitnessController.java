@@ -1,31 +1,37 @@
 package org.workshop.momentummosaicapp.controller;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.workshop.momentummosaicapp.fitness.DailyFitnessLog;
 import org.workshop.momentummosaicapp.fitness.FitnessService;
-import org.workshop.momentummosaicapp.fitness.WorkoutRequest;
+import org.workshop.momentummosaicapp.fitness.dto.FitnessLogResponse;
+import org.workshop.momentummosaicapp.fitness.dto.WorkoutRequest;
+import org.workshop.momentummosaicapp.utility.DtoMapper;
 
 @RestController
 @RequestMapping("/api/fitness")
 @RequiredArgsConstructor
 public class FitnessController {
     private final FitnessService fitnessService;
+    private final DtoMapper dtoMapper;
     @PostMapping("/{userId}/workout")
-    public void markWorkoutToday(@PathVariable Long userId, @RequestBody WorkoutRequest request){
-
+    public void markWorkoutToday(@PathVariable Long userId, @RequestBody @Valid WorkoutRequest request){
+        fitnessService.markWorkoutToday(userId, request.getDidWorkout());
     }
     @GetMapping("/{userId}/today")
-    public DailyFitnessLog getToday(@PathVariable Long userId){
-        return null;
+    public FitnessLogResponse getToday(@PathVariable Long userId){
+        DailyFitnessLog dailyFitnessLog = fitnessService.getTodayLog(userId).orElseThrow(()-> new EntityNotFoundException("No log found for today"));
+        return dtoMapper.dailyFitnessLogToFitnessLogResponse(dailyFitnessLog);
     }
     @GetMapping("/{userId}/total-days")
     public int getTotalWorkoutDays(@PathVariable Long userId){
-        return 0;
+        return fitnessService.getTotalWorkoutDays(userId);
     }
     @GetMapping("/{userId}/streak")
     public int getWorkoutStreak(@PathVariable Long userId){
-        return 0;
+        return fitnessService.getWorkoutStreak(userId);
     }
 
 }
