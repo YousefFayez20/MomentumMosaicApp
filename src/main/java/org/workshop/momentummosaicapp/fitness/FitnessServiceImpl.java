@@ -1,14 +1,16 @@
 package org.workshop.momentummosaicapp.fitness;
 
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.workshop.momentummosaicapp.user.User;
 import org.workshop.momentummosaicapp.user.UserRepository;
+import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -56,7 +58,7 @@ public class FitnessServiceImpl implements FitnessService {
         return fitnessLogRepository.findByUserIdAndDate(userId,LocalDate.now());
     }
     private User getUserOrThrow(Long userId){
-        return userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User Not Found"));
+        return userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
     }
 
     private DailyFitnessLog getOrCreateTodayLog(User user){

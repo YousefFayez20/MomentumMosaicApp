@@ -1,6 +1,5 @@
 package org.workshop.momentummosaicapp.dashboard;
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage.*;
@@ -12,6 +11,7 @@ import org.workshop.momentummosaicapp.task.TaskRepository;
 import org.workshop.momentummosaicapp.task.TaskType;
 import org.workshop.momentummosaicapp.user.User;
 import org.workshop.momentummosaicapp.user.UserRepository;
+import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
 
 import java.util.List;
 import java.util.Optional;
@@ -67,7 +67,7 @@ public class DashboardServiceImpl implements DashboardService{
                 DashboardResponse.builder().taskSummary(taskSummary).fitnessSummary(fitnessSummary).userSummary(userSummary).build();
     }
     private User getUserOrThrow(Long userId){
-        return userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User Not Found"));
+        return userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
     }
     private TaskItem toTaskItem(Task task){
         return TaskItem.builder()

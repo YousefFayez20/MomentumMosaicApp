@@ -1,9 +1,10 @@
 package org.workshop.momentummosaicapp.user;
 
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.workshop.momentummosaicapp.utility.exception.BadRequestException;
+import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
 
 @Service
 @RequiredArgsConstructor
@@ -13,8 +14,8 @@ public class UserServiceImpl implements UserService{
 
     @Override
     public User createUser(String name, Gender gender, Integer heightCm, Integer weightKg) {
-        if(heightCm <=0) throw new IllegalArgumentException("Height must be Positive");
-        if(weightKg <=0) throw new IllegalArgumentException("weight must be Positive");
+        if(heightCm <=0) throw new BadRequestException("Height must be Positive");
+        if(weightKg <=0) throw new BadRequestException("weight must be Positive");
         if(gender == null){
             gender = Gender.MALE;
         }
@@ -28,14 +29,14 @@ public class UserServiceImpl implements UserService{
 
     @Override
     public User getUser(Long userId) {
-        return userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User Not Found"));
+        return userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
     }
 
     @Override
     public User updateUser(Long userId, Integer heightCm, Integer weightKg) {
         User user = getUser(userId);
-        if(heightCm <=0) throw new IllegalArgumentException("Height must be Positive");
-        if(weightKg <=0) throw new IllegalArgumentException("weight must be Positive");
+        if(heightCm <=0) throw new BadRequestException("Height must be Positive");
+        if(weightKg <=0) throw new BadRequestException("weight must be Positive");
         user.setWeightKg(weightKg);
         user.setHeightCm(heightCm);
         return userRepository.save(user);

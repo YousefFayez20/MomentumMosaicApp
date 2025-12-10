@@ -1,11 +1,13 @@
 package org.workshop.momentummosaicapp.task;
 
 
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.workshop.momentummosaicapp.user.User;
 import org.workshop.momentummosaicapp.user.UserRepository;
+import org.workshop.momentummosaicapp.utility.exception.BadRequestException;
+import org.workshop.momentummosaicapp.utility.exception.ForbiddenException;
+import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
 
 import java.time.Instant;
 import java.util.List;
@@ -73,21 +75,21 @@ public class TaskServiceImpl implements TaskService{
     }
     private void validateTaskDuration(TaskType type, int durationMinutes){
         if(durationMinutes<=0){
-            throw new IllegalArgumentException("Duration must be greater than zero.");
+            throw new BadRequestException("Duration must be greater than zero.");
         }
         if(type == TaskType.DEEP && durationMinutes < 120){
-            throw new IllegalArgumentException("Deep Task should be at least 2 hours");
+            throw new BadRequestException("Deep Task should be at least 2 hours");
         }
     }
     private User getUserOrThrow(Long userId){
-        return userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User Not Found"));
+        return userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
     }
     private Task getTaskOrThrow(Long taskId){
-        return taskRepository.findById(taskId).orElseThrow(()-> new EntityNotFoundException("task doesn't exist"));
+        return taskRepository.findById(taskId).orElseThrow(()-> new ResourceNotFoundException("task doesn't exist"));
     }
     private void validateOwnership(Long userId,Task task){
         if(!task.getUser().getId().equals(userId)){
-            throw new IllegalArgumentException("Task does not belong to this user");
+            throw new ForbiddenException("Task does not belong to this user");
         }
     }
 }
