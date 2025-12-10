@@ -9,6 +9,7 @@ import org.workshop.momentummosaicapp.fitness.FitnessService;
 import org.workshop.momentummosaicapp.fitness.dto.FitnessLogResponse;
 import org.workshop.momentummosaicapp.fitness.dto.WorkoutRequest;
 import org.workshop.momentummosaicapp.utility.DtoMapper;
+import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
 
 @RestController
 @RequestMapping("/api/fitness")
@@ -22,7 +23,7 @@ public class FitnessController {
     }
     @GetMapping("/{userId}/today")
     public FitnessLogResponse getToday(@PathVariable Long userId){
-        DailyFitnessLog dailyFitnessLog = fitnessService.getTodayLog(userId).orElseThrow(()-> new EntityNotFoundException("No log found for today"));
+        DailyFitnessLog dailyFitnessLog = fitnessService.getTodayLog(userId).orElseThrow(()-> new ResourceNotFoundException("No log found for today"));
         return dtoMapper.dailyFitnessLogToFitnessLogResponse(dailyFitnessLog);
     }
     @GetMapping("/{userId}/total-days")
