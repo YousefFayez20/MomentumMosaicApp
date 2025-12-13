@@ -3,8 +3,8 @@ package org.workshop.momentummosaicapp.fitness;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.workshop.momentummosaicapp.user.User;
-import org.workshop.momentummosaicapp.user.UserRepository;
+import org.workshop.momentummosaicapp.user.AppUser;
+import org.workshop.momentummosaicapp.user.appUserRepository;
 import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
 
 import java.time.LocalDate;
@@ -17,11 +17,11 @@ import java.util.Optional;
 public class FitnessServiceImpl implements FitnessService {
 
     private final DailyFitnessLogRepository fitnessLogRepository;
-    private final UserRepository userRepository;
+    private final appUserRepository appUserRepository;
     @Override
     public void markWorkoutToday(Long userId, boolean didWorkout) {
-        User user = getUserOrThrow(userId);
-        DailyFitnessLog todaylog = getOrCreateTodayLog(user);
+        AppUser appUser = getUserOrThrow(userId);
+        DailyFitnessLog todaylog = getOrCreateTodayLog(appUser);
         todaylog.setDidWorkout(didWorkout);
         fitnessLogRepository.save(todaylog);
     }
@@ -57,16 +57,16 @@ public class FitnessServiceImpl implements FitnessService {
 
         return fitnessLogRepository.findByUserIdAndDate(userId,LocalDate.now());
     }
-    private User getUserOrThrow(Long userId){
-        return userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
+    private AppUser getUserOrThrow(Long userId){
+        return appUserRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
     }
 
-    private DailyFitnessLog getOrCreateTodayLog(User user){
-        Optional<DailyFitnessLog> todayLog = getTodayLog(user.getId());
+    private DailyFitnessLog getOrCreateTodayLog(AppUser appUser){
+        Optional<DailyFitnessLog> todayLog = getTodayLog(appUser.getId());
         if (todayLog.isPresent()) return todayLog.get();
 
         DailyFitnessLog log = new DailyFitnessLog();
-        log.setUser(user);
+        log.setAppUser(appUser);
         log.setDate(LocalDate.now());
         log.setDidWorkout(false);
         return fitnessLogRepository.save(log);

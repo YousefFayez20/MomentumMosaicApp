@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.workshop.momentummosaicapp.user.User;
+import org.workshop.momentummosaicapp.user.AppUser;
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -27,7 +27,7 @@ public class DailyFitnessLog {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
-    private User user;
+    private AppUser appUser;
 
     @Column(nullable = false)
     private LocalDate date;

@@ -6,7 +6,7 @@ import org.workshop.momentummosaicapp.fitness.DailyFitnessLog;
 import org.workshop.momentummosaicapp.fitness.dto.FitnessLogResponse;
 import org.workshop.momentummosaicapp.task.Task;
 import org.workshop.momentummosaicapp.task.dto.TaskResponse;
-import org.workshop.momentummosaicapp.user.User;
+import org.workshop.momentummosaicapp.user.AppUser;
 import org.workshop.momentummosaicapp.user.dto.UserResponse;
 
 @Component
@@ -21,13 +21,13 @@ public class DtoMapper {
         taskResponse.setCompletedAt(task.getCompletedAt());
         return taskResponse;
     }
-    public UserResponse userToUserResponse(User user){
+    public UserResponse userToUserResponse(AppUser appUser){
         UserResponse userResponse = new UserResponse();
-        userResponse.setGender(user.getGender());
-        userResponse.setId(user.getId());
-        userResponse.setName(user.getName());
-        userResponse.setHeightCm(user.getHeightCm());
-        userResponse.setWeightKg(user.getWeightKg());
+        userResponse.setGender(appUser.getGender());
+        userResponse.setId(appUser.getId());
+        userResponse.setName(appUser.getName());
+        userResponse.setHeightCm(appUser.getHeightCm());
+        userResponse.setWeightKg(appUser.getWeightKg());
         return userResponse;
     }
     public FitnessLogResponse dailyFitnessLogToFitnessLogResponse(DailyFitnessLog dailyFitnessLog){

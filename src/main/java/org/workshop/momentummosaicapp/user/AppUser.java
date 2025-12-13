@@ -15,19 +15,32 @@ import java.time.Instant;
 @NoArgsConstructor
 @Setter
 @Getter
-public class User {
+public class AppUser {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String name;
 
+    @Column(nullable = true)
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
     private Gender gender;
+
+    @Column(unique = true,nullable = false)
+    private String email;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+
+    private Role role = Role.USER;
+
+    @Column(nullable = false)
+
+    private boolean enabled = true;
+
 
     @Column(nullable = false)
     private Integer heightCm;

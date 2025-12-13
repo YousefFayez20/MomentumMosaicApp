@@ -3,8 +3,8 @@ package org.workshop.momentummosaicapp.task;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.workshop.momentummosaicapp.user.User;
-import org.workshop.momentummosaicapp.user.UserRepository;
+import org.workshop.momentummosaicapp.user.AppUser;
+import org.workshop.momentummosaicapp.user.appUserRepository;
 import org.workshop.momentummosaicapp.utility.exception.BadRequestException;
 import org.workshop.momentummosaicapp.utility.exception.ForbiddenException;
 import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
@@ -17,16 +17,16 @@ import java.util.List;
 public class TaskServiceImpl implements TaskService{
 
     private final TaskRepository taskRepository;
-    private final UserRepository userRepository;
+    private final appUserRepository appUserRepository;
 
     @Override
     public Task createTask(String title, Long userId, TaskType taskType, Integer durationMinutes) {
        validateTaskDuration(taskType,durationMinutes);
-        User user = getUserOrThrow(userId);
+        AppUser appUser = getUserOrThrow(userId);
         Task task = new Task();
         task.setTitle(title);
         task.setTaskType(taskType);
-        task.setUser(user);
+        task.setAppUser(appUser);
         task.setDurationMinutes(durationMinutes);
         task.setCompleted(false);
         return taskRepository.save(task);
@@ -53,7 +53,7 @@ public class TaskServiceImpl implements TaskService{
 
     @Override
     public Task completeTask(Long userId, Long taskId) {
-        User user = getUserOrThrow(userId);
+        AppUser appUser = getUserOrThrow(userId);
         Task task = getTaskOrThrow(taskId);
         validateOwnership(userId,task);
         if (task.isCompleted()) return task;
@@ -64,14 +64,14 @@ public class TaskServiceImpl implements TaskService{
 
     @Override
     public List<Task> getActiveTasks(Long userId) {
-        User user = getUserOrThrow(userId);
-        return taskRepository.findByUserIdAndCompletedFalse(userId);
+        AppUser appUser = getUserOrThrow(userId);
+        return taskRepository.findByAppUserIdAndCompletedFalse(userId);
     }
 
     @Override
     public List<Task> getCompletedTasks(Long userId) {
-        User user = getUserOrThrow(userId);
-        return taskRepository.findByUserIdAndCompletedTrue(userId);
+        AppUser appUser = getUserOrThrow(userId);
+        return taskRepository.findByAppUserIdAndCompletedTrue(userId);
     }
     private void validateTaskDuration(TaskType type, int durationMinutes){
         if(durationMinutes<=0){
@@ -81,14 +81,14 @@ public class TaskServiceImpl implements TaskService{
             throw new BadRequestException("Deep Task should be at least 2 hours");
         }
     }
-    private User getUserOrThrow(Long userId){
-        return userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
+    private AppUser getUserOrThrow(Long userId){
+        return appUserRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
     }
     private Task getTaskOrThrow(Long taskId){
         return taskRepository.findById(taskId).orElseThrow(()-> new ResourceNotFoundException("task doesn't exist"));
     }
     private void validateOwnership(Long userId,Task task){
-        if(!task.getUser().getId().equals(userId)){
+        if(!task.getAppUser().getId().equals(userId)){
             throw new ForbiddenException("Task does not belong to this user");
         }
     }

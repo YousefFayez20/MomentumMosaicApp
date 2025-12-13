@@ -9,8 +9,8 @@ import org.workshop.momentummosaicapp.fitness.FitnessService;
 import org.workshop.momentummosaicapp.task.Task;
 import org.workshop.momentummosaicapp.task.TaskRepository;
 import org.workshop.momentummosaicapp.task.TaskType;
-import org.workshop.momentummosaicapp.user.User;
-import org.workshop.momentummosaicapp.user.UserRepository;
+import org.workshop.momentummosaicapp.user.AppUser;
+import org.workshop.momentummosaicapp.user.appUserRepository;
 import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
 
 import java.util.List;
@@ -21,23 +21,23 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class DashboardServiceImpl implements DashboardService{
 
-    private final UserRepository userRepository;
+    private final appUserRepository appUserRepository;
     private final TaskRepository taskRepository;
     private final DailyFitnessLogRepository fitnessLogRepository;
     private final FitnessService fitnessService;
 
     @Override
     public DashboardResponse getDashboard(Long userId) {
-        User user = getUserOrThrow(userId);
-        double proteinMin = user.getWeightKg()*1.6;
-        double proteinMax = user.getWeightKg()*2.2;
+        AppUser appUser = getUserOrThrow(userId);
+        double proteinMin = appUser.getWeightKg()*1.6;
+        double proteinMax = appUser.getWeightKg()*2.2;
         //calculating calorie targets
-        int maintenance = user.getWeightKg()*33;
+        int maintenance = appUser.getWeightKg()*33;
         int cut = maintenance-300;
         int bulk = maintenance+300;
-        UserSummary userSummary = UserSummary.builder().heightCm(user.getHeightCm())
-                .weightKg(user.getWeightKg())
-                .gender(user.getGender())
+        UserSummary userSummary = UserSummary.builder().heightCm(appUser.getHeightCm())
+                .weightKg(appUser.getWeightKg())
+                .gender(appUser.getGender())
                 .caloriesCut(cut)
                 .caloriesBulk(bulk)
                 .proteinMax(proteinMax)
@@ -45,8 +45,8 @@ public class DashboardServiceImpl implements DashboardService{
                 .caloriesMaintenance(maintenance)
                 .build();
 
-        List<Task> active = taskRepository.findByUserIdAndCompletedFalse(userId);
-        List<Task> completed = taskRepository.findByUserIdAndCompletedTrue(userId);
+        List<Task> active = taskRepository.findByAppUserIdAndCompletedFalse(userId);
+        List<Task> completed = taskRepository.findByAppUserIdAndCompletedTrue(userId);
         List<TaskItem> activeItems= active.stream().map(task -> toTaskItem(task)
         ).toList();
         List<TaskItem> completedItems= completed.stream().map(task -> toTaskItem(task)
@@ -66,8 +66,8 @@ public class DashboardServiceImpl implements DashboardService{
         return
                 DashboardResponse.builder().taskSummary(taskSummary).fitnessSummary(fitnessSummary).userSummary(userSummary).build();
     }
-    private User getUserOrThrow(Long userId){
-        return userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
+    private AppUser getUserOrThrow(Long userId){
+        return appUserRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
     }
     private TaskItem toTaskItem(Task task){
         return TaskItem.builder()
