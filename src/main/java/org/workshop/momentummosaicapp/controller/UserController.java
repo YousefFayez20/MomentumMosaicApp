@@ -3,6 +3,7 @@ package org.workshop.momentummosaicapp.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.workshop.momentummosaicapp.user.AppUser;
 import org.workshop.momentummosaicapp.user.appUserService;
@@ -14,6 +15,7 @@ import org.workshop.momentummosaicapp.utility.DtoMapper;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@PreAuthorize("@profileGuard.isCompleted(authentication)")
 public class UserController {
 
     private final appUserService appUserService;

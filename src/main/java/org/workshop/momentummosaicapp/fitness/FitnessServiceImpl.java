@@ -4,7 +4,7 @@ package org.workshop.momentummosaicapp.fitness;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.workshop.momentummosaicapp.user.AppUser;
-import org.workshop.momentummosaicapp.user.appUserRepository;
+import org.workshop.momentummosaicapp.user.AppUserRepository;
 import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
 
 import java.time.LocalDate;
@@ -17,7 +17,7 @@ import java.util.Optional;
 public class FitnessServiceImpl implements FitnessService {
 
     private final DailyFitnessLogRepository fitnessLogRepository;
-    private final appUserRepository appUserRepository;
+    private final AppUserRepository appUserRepository;
     @Override
     public void markWorkoutToday(Long userId, boolean didWorkout) {
         AppUser appUser = getUserOrThrow(userId);
@@ -29,7 +29,7 @@ public class FitnessServiceImpl implements FitnessService {
     @Override
     public int getTotalWorkoutDays(Long userId) {
         getUserOrThrow(userId);
-        List<DailyFitnessLog> logs = fitnessLogRepository.findByUserId(userId);
+        List<DailyFitnessLog> logs = fitnessLogRepository.findByAppUserId(userId);
 
         return (int)logs.stream().filter(DailyFitnessLog::isDidWorkout).count();
     }
@@ -37,7 +37,7 @@ public class FitnessServiceImpl implements FitnessService {
     @Override
     public int getWorkoutStreak(Long userId) {
         int streak=0;
-        List<DailyFitnessLog> dailyFitnessLogs = fitnessLogRepository.findByUserId(userId);
+        List<DailyFitnessLog> dailyFitnessLogs = fitnessLogRepository.findByAppUserId(userId);
         dailyFitnessLogs.sort(Comparator.comparing(DailyFitnessLog::getDate).reversed());
         LocalDate currentDate = LocalDate.now();
         for (DailyFitnessLog log: dailyFitnessLogs){
@@ -55,7 +55,7 @@ public class FitnessServiceImpl implements FitnessService {
     public Optional<DailyFitnessLog> getTodayLog(Long userId) {
         getUserOrThrow(userId);
 
-        return fitnessLogRepository.findByUserIdAndDate(userId,LocalDate.now());
+        return fitnessLogRepository.findByAppUserIdAndDate(userId,LocalDate.now());
     }
     private AppUser getUserOrThrow(Long userId){
         return appUserRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));

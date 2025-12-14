@@ -10,7 +10,7 @@ import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundExceptio
 @RequiredArgsConstructor
 public class appUserServiceImpl implements appUserService {
 
-    private final appUserRepository appUserRepository;
+    private final AppUserRepository appUserRepository;
 
     @Override
     public AppUser createUser(String name, Gender gender, Integer heightCm, Integer weightKg) {

@@ -42,15 +42,16 @@ public class AppUser {
     private boolean enabled = true;
 
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Integer heightCm;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private Integer weightKg;
 
     @CreationTimestamp
     private Instant createdAt;
-
+    @Column(nullable = false)
+    private boolean profileCompleted = false;
 
 
 

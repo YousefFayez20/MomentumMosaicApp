@@ -7,6 +7,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface DailyFitnessLogRepository extends JpaRepository<DailyFitnessLog,Long> {
-    Optional<DailyFitnessLog> findByUserIdAndDate(Long userId, LocalDate date);
-    List<DailyFitnessLog> findByUserId(Long userId);
+    Optional<DailyFitnessLog> findByAppUserIdAndDate(Long userId, LocalDate date);
+    List<DailyFitnessLog> findByAppUserId(Long userId);
 }

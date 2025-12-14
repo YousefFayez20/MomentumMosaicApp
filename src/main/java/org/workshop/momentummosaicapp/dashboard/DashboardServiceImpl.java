@@ -10,7 +10,7 @@ import org.workshop.momentummosaicapp.task.Task;
 import org.workshop.momentummosaicapp.task.TaskRepository;
 import org.workshop.momentummosaicapp.task.TaskType;
 import org.workshop.momentummosaicapp.user.AppUser;
-import org.workshop.momentummosaicapp.user.appUserRepository;
+import org.workshop.momentummosaicapp.user.AppUserRepository;
 import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
 
 import java.util.List;
@@ -21,7 +21,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class DashboardServiceImpl implements DashboardService{
 
-    private final appUserRepository appUserRepository;
+    private final AppUserRepository appUserRepository;
     private final TaskRepository taskRepository;
     private final DailyFitnessLogRepository fitnessLogRepository;
     private final FitnessService fitnessService;

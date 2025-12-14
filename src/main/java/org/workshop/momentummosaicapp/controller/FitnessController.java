@@ -3,6 +3,7 @@ package org.workshop.momentummosaicapp.controller;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.workshop.momentummosaicapp.fitness.DailyFitnessLog;
 import org.workshop.momentummosaicapp.fitness.FitnessService;
@@ -14,6 +15,7 @@ import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundExceptio
 @RestController
 @RequestMapping("/api/fitness")
 @RequiredArgsConstructor
+@PreAuthorize("@profileGuard.isCompleted(authentication)")
 public class FitnessController {
     private final FitnessService fitnessService;
     private final DtoMapper dtoMapper;

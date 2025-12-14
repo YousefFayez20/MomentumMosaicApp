@@ -4,7 +4,7 @@ package org.workshop.momentummosaicapp.task;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.workshop.momentummosaicapp.user.AppUser;
-import org.workshop.momentummosaicapp.user.appUserRepository;
+import org.workshop.momentummosaicapp.user.AppUserRepository;
 import org.workshop.momentummosaicapp.utility.exception.BadRequestException;
 import org.workshop.momentummosaicapp.utility.exception.ForbiddenException;
 import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
@@ -17,7 +17,7 @@ import java.util.List;
 public class TaskServiceImpl implements TaskService{
 
     private final TaskRepository taskRepository;
-    private final appUserRepository appUserRepository;
+    private final AppUserRepository appUserRepository;
 
     @Override
     public Task createTask(String title, Long userId, TaskType taskType, Integer durationMinutes) {

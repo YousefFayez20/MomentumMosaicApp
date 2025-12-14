@@ -2,6 +2,7 @@ package org.workshop.momentummosaicapp.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.workshop.momentummosaicapp.task.Task;
 import org.workshop.momentummosaicapp.task.TaskService;
@@ -14,6 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/tasks")
 @RequiredArgsConstructor
+@PreAuthorize("@profileGuard.isCompleted(authentication)")
 public class TaskController {
 
     private final TaskService taskService;
