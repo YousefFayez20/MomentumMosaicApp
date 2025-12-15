@@ -13,7 +13,6 @@ import org.workshop.momentummosaicapp.user.AppUser;
 import org.workshop.momentummosaicapp.user.AppUserRepository;
 
 import java.io.IOException;
-
 @Component
 @RequiredArgsConstructor
 public class ProfileCompletionFilter extends OncePerRequestFilter {
@@ -29,8 +28,13 @@ public class ProfileCompletionFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        // Allow profile completion endpoint
-        if (path.startsWith("/api/profile/complete")) {
+        // ✅ ALWAYS allow these endpoints
+        if (path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")
+                || path.equals("/swagger-ui.html")
+                || path.equals("/api/auth/me")           // 🔴 REQUIRED
+                || path.startsWith("/api/profile/complete")) {
+
             filterChain.doFilter(request, response);
             return;
         }
@@ -46,9 +50,7 @@ public class ProfileCompletionFilter extends OncePerRequestFilter {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 response.setContentType("application/json");
                 response.getWriter().write("""
-                    {
-                      "error": "PROFILE_NOT_COMPLETED"
-                    }
+                    { "error": "PROFILE_NOT_COMPLETED" }
                 """);
                 return;
             }

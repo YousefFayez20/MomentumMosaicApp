@@ -2,7 +2,9 @@ package org.workshop.momentummosaicapp.user;
 
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import org.workshop.momentummosaicapp.utility.exception.BadRequestException;
 import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
 
@@ -42,4 +44,10 @@ public class appUserServiceImpl implements appUserService {
         return appUserRepository.save(appUser);
 
     }
+    @Override
+    public AppUser getByEmail(String email) {
+        return appUserRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+    }
+
 }
