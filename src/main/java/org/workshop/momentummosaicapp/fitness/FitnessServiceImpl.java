@@ -3,6 +3,7 @@ package org.workshop.momentummosaicapp.fitness;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage.UserSummary;
 import org.workshop.momentummosaicapp.user.AppUser;
 import org.workshop.momentummosaicapp.user.AppUserRepository;
 import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
@@ -70,6 +71,25 @@ public class FitnessServiceImpl implements FitnessService {
         log.setDate(LocalDate.now());
         log.setDidWorkout(false);
         return fitnessLogRepository.save(log);
+    }
+    public UserSummary getUserSummary(Long userId){
+        AppUser appUser = getUserOrThrow(userId);
+        double proteinMin = appUser.getWeightKg()*1.6;
+        double proteinMax = appUser.getWeightKg()*2.2;
+        //calculating calorie targets
+        int maintenance = appUser.getWeightKg()*33;
+        int cut = maintenance-300;
+        int bulk = maintenance+300;
+        UserSummary userSummary = UserSummary.builder().heightCm(appUser.getHeightCm())
+                .weightKg(appUser.getWeightKg())
+                .gender(appUser.getGender())
+                .caloriesCut(cut)
+                .caloriesBulk(bulk)
+                .proteinMax(proteinMax)
+                .proteinMin(proteinMin)
+                .caloriesMaintenance(maintenance)
+                .build();
+        return userSummary;
     }
 
 }

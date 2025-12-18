@@ -1,5 +1,7 @@
 package org.workshop.momentummosaicapp.fitness;
 
+import org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage.UserSummary;
+
 import java.util.Optional;
 
 public interface FitnessService {
@@ -7,6 +9,7 @@ public interface FitnessService {
     public int getTotalWorkoutDays(Long userId);
     public int getWorkoutStreak(Long userId);
     Optional<DailyFitnessLog> getTodayLog(Long userId);
+    public UserSummary getUserSummary(Long userId);
 
 
 }

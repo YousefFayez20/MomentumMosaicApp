@@ -4,6 +4,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage.FitnessSummary;
+import org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage.UserSummary;
 
 import java.time.LocalDate;
 
@@ -16,5 +18,6 @@ import java.time.LocalDate;
 public class FitnessLogResponse {
     private boolean didWorkout;
     private LocalDate date;
+    private UserSummary summary;
 
 }

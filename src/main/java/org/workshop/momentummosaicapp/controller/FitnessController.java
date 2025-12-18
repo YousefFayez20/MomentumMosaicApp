@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage.UserSummary;
 import org.workshop.momentummosaicapp.fitness.DailyFitnessLog;
 import org.workshop.momentummosaicapp.fitness.FitnessService;
 import org.workshop.momentummosaicapp.fitness.dto.FitnessLogResponse;
@@ -36,5 +37,10 @@ public class FitnessController {
     public int getWorkoutStreak(@PathVariable Long userId){
         return fitnessService.getWorkoutStreak(userId);
     }
+    @GetMapping("/{userId}/macros")
+    public UserSummary getMacros(@PathVariable Long userId){
+        return fitnessService.getUserSummary(userId);
+    }
+
 
 }
