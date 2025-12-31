@@ -98,6 +98,7 @@
     </dependencies>
 
     <build>
+        <finalName>momentum-mosaic</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
