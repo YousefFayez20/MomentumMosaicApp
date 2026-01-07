@@ -55,13 +55,11 @@ public class FitnessServiceImpl implements FitnessService {
     @Override
     public Optional<DailyFitnessLog> getTodayLog(Long userId) {
         getUserOrThrow(userId);
-
         return fitnessLogRepository.findByAppUserIdAndDate(userId,LocalDate.now());
     }
     private AppUser getUserOrThrow(Long userId){
         return appUserRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
     }
-
     private DailyFitnessLog getOrCreateTodayLog(AppUser appUser){
         Optional<DailyFitnessLog> todayLog = getTodayLog(appUser.getId());
         if (todayLog.isPresent()) return todayLog.get();
