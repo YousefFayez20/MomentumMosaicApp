@@ -17,24 +17,20 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: 'maven'
-      - name: Cache Maven dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven
       - name: Compile Project
         run: mvn clean compile
+      - name: Run unit tests
+        run: mvn test
       - name: Build backend Docker image
         run: |
           docker build \
           -t momentum-backend:test .
-      - name: Package Project
-        run: mvn clean package -DskipTests
   frontend:
     name: Build Frontend
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./momentum-mosaic-dashboard
 
     steps:
 
@@ -49,22 +45,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
+          cache-dependency-path: './momentum-mosaic-dashboard/package-lock.json'
 
 
 
       # STEP 3 — Install dependencies
       - name: Install frontend packages
-        run: |
-          cd momentum-mosaic-dashboard
-          npm ci
+        run: npm ci
 
 
 
       # STEP 4 — Build Next.js
       - name: Build frontend
-        run: |
-          cd momentum-mosaic-dashboard
-          npm run build
+        run: npm run build
 
 
 
@@ -74,14 +68,7 @@ jobs:
           docker build \
           -t momentum-frontend:test \
           ./momentum-mosaic-dashboard
-      - name: Test docker-compose
-        run: |
 
-          docker compose up -d
-
-          sleep 20
-
-          docker compose ps
         
 
     
