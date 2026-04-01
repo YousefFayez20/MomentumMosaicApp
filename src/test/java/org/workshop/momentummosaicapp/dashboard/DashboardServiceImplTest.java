@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.context.ActiveProfiles;
 import org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage.DashboardResponse;
 import org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage.FitnessSummary;
 import org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage.TaskSummary;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@ActiveProfiles("test")
 class DashboardServiceImplTest {
     @Mock
     AppUserRepository appUserRepository;

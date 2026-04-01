@@ -5,6 +5,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.context.ActiveProfiles;
 import org.workshop.momentummosaicapp.user.AppUser;
 import org.workshop.momentummosaicapp.user.AppUserRepository;
 import org.workshop.momentummosaicapp.utility.exception.BadRequestException;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.*;
 
 
 @ExtendWith(MockitoExtension.class)
+@ActiveProfiles("test")
 class TaskServiceImplTest {
     @Mock
     TaskRepository taskRepository;

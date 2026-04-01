@@ -66,8 +66,7 @@ jobs:
       - name: Build frontend Docker image
         run: |
           docker build \
-          -t momentum-frontend:test \
-          ./momentum-mosaic-dashboard
+          -t momentum-frontend:test .
 
         
 

@@ -3,6 +3,7 @@ package org.workshop.momentummosaicapp.fitness;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MySQLContainer;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @Testcontainers
+@ActiveProfiles("test")
 class DailyFitnessLogRepositoryTest {
     @Container
     static MySQLContainer<?> mysql =

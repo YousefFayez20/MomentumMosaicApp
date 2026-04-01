@@ -6,6 +6,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.context.ActiveProfiles;
 import org.workshop.momentummosaicapp.user.AppUser;
 import org.workshop.momentummosaicapp.user.AppUserRepository;
 
@@ -20,6 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@ActiveProfiles("test")
 class FitnessServiceImplTest {
     @Mock
     DailyFitnessLogRepository dailyFitnessLogRepository;
