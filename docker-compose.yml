@@ -33,6 +33,20 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
 
+  frontend:
+    build: ./momentum-mosaic-dashboard
+    container_name: momentum-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      # Browser requests
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+
+      # Server-side requests
+      INTERNAL_API_URL: http://backend:8080
+
 
 volumes:
   mysqldata:

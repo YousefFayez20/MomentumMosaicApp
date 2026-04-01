@@ -1,0 +1,474 @@
+openapi: 3.0.3
+info:
+  title: Momentum Mosaic API
+  description: >
+    Backend API for Momentum Mosaic – fitness, tasks, dashboard,
+    and OAuth2-based authentication.
+    Updated to reflect Frontend implementation requirements.
+  version: 1.0.1
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+tags:
+  - name: Auth
+  - name: Profile
+  - name: Dashboard
+  - name: Fitness
+  - name: Tasks
+  - name: Users
+
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: JSESSIONID
+
+  schemas:
+    ApiError:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+
+    CompleteProfileRequest:
+      type: object
+      required: [gender, heightCm, weightKg]
+      properties:
+        gender:
+          type: string
+          enum: [MALE, FEMALE]
+        heightCm:
+          type: integer
+          minimum: 50
+        weightKg:
+          type: integer
+          minimum: 20
+
+    WorkoutRequest:
+      type: object
+      required: [didWorkout]
+      properties:
+        didWorkout:
+          type: boolean
+
+    FitnessLogResponse:
+      type: object
+      properties:
+        didWorkout:
+          type: boolean
+        date:
+          type: string
+          format: date
+        summary:
+          $ref: '#/components/schemas/UserSummary'
+
+    TaskRequest:
+      type: object
+      required: [title, taskType, durationMinutes]
+      properties:
+        title:
+          type: string
+        taskType:
+          type: string
+          enum: [DEEP, SHALLOW, FITNESS]
+        durationMinutes:
+          type: integer
+          minimum: 1
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        taskType:
+          type: string
+          enum: [DEEP, SHALLOW, FITNESS]
+        durationMinutes:
+          type: integer
+          minimum: 1
+
+    TaskResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        taskType:
+          type: string
+          enum: [DEEP, SHALLOW, FITNESS]
+        durationMinutes:
+          type: integer
+        completed:
+          type: boolean
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        gender:
+          type: string
+        heightCm:
+          type: integer
+        weightKg:
+          type: integer
+
+    DashboardResponse:
+      type: object
+      properties:
+        userSummary:
+          $ref: '#/components/schemas/UserSummary'
+        taskSummary:
+          $ref: '#/components/schemas/TaskSummary'
+        fitnessSummary:
+          $ref: '#/components/schemas/FitnessSummary'
+
+    UserSummary:
+      type: object
+      properties:
+        heightCm:
+          type: integer
+        weightKg:
+          type: integer
+        gender:
+          type: string
+        proteinMin:
+          type: number
+        proteinMax:
+          type: number
+        caloriesMaintenance:
+          type: integer
+        caloriesCut:
+          type: integer
+        caloriesBulk:
+          type: integer
+
+    FitnessSummary:
+      type: object
+      properties:
+        didWorkoutToday:
+          type: boolean
+        totalWorkoutDays:
+          type: integer
+        workoutStreak:
+          type: integer
+
+    TaskSummary:
+      type: object
+      properties:
+        activeTasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskResponse'
+        completedTasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskResponse'
+        totalDeepMinutes:
+          type: integer
+        totalShallowMinutes:
+          type: integer
+        totalFitnessMinutes:
+          type: integer
+
+security:
+  - sessionAuth: []
+
+paths:
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get authenticated user info
+      responses:
+        200:
+          description: Authenticated user info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  email:
+                    type: string
+                  name:
+                    type: string
+                  profileCompleted:
+                    type: boolean
+        401:
+          description: Unauthorized
+
+  /api/profile/complete:
+    put:
+      tags: [Profile]
+      summary: Complete user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteProfileRequest'
+      responses:
+        200:
+          description: Profile completed
+        401:
+          description: Unauthorized
+
+  /api/dashboard/{userId}:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard data
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Dashboard response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+
+  /api/fitness/{userId}/workout:
+    post:
+      tags: [Fitness]
+      summary: Mark today's workout
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkoutRequest'
+      responses:
+        200:
+          description: Workout logged
+
+  /api/fitness/{userId}/today:
+    get:
+      tags: [Fitness]
+      summary: Get today's fitness log
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Fitness log
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FitnessLogResponse'
+
+  /api/fitness/{userId}/total-days:
+    get:
+      tags: [Fitness]
+      summary: Get total workout days
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Total workout days
+          content:
+            application/json:
+              schema:
+                type: integer
+
+  /api/fitness/{userId}/streak:
+    get:
+      tags: [Fitness]
+      summary: Get workout streak
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Current workout streak
+          content:
+            application/json:
+              schema:
+                type: integer
+
+  /api/fitness/{userId}/macros:
+    get:
+      tags: [Fitness]
+      summary: Get user macros
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: User macros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSummary'
+
+  /api/tasks/active/{userId}:
+    get:
+      tags: [Tasks]
+      summary: Get active tasks for user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: List of active tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskResponse'
+
+  /api/tasks/completed/{userId}:
+    get:
+      tags: [Tasks]
+      summary: Get completed tasks for user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: List of completed tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TaskResponse'
+
+  /api/tasks/{userId}:
+    post:
+      tags: [Tasks]
+      summary: Create task
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskRequest'
+      responses:
+        200:
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+
+  /api/tasks/{userId}/{taskId}:
+    put:
+      tags: [Tasks]
+      summary: Update task
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        200:
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+    delete:
+      tags: [Tasks]
+      summary: Delete task
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        204:
+          description: Task deleted
+
+  /api/tasks/{userId}/{taskId}/complete:
+    put:
+      tags: [Tasks]
+      summary: Mark task as complete
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Task completed
