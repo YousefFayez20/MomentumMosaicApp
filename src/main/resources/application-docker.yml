@@ -16,7 +16,7 @@ spring:
       ddl-auto: update
     show-sql: true
     defer-datasource-initialization: true
-  app:
+app:
   frontend:
     url: ${FRONTEND_URL:http://localhost:3000}
 
