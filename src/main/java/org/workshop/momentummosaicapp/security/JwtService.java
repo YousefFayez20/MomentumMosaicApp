@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.workshop.momentummosaicapp.user.AppUser;
 
@@ -15,8 +16,9 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    private static final String SECRET_KEY =
-            "MY_SUPER_SECRET_KEY_MY_SUPER_SECRET_KEY_123456";
+
+    @Value("${app.jwt.secret}")
+    private String secretKey;
 
     private static final long EXPIRATION_MS = 1000 * 60 * 60 * 24;
 
@@ -54,7 +56,7 @@ public class JwtService {
 
     private SecretKey getSigningKey() {
         byte[] keyBytes = Decoders.BASE64.decode(
-                Base64.getEncoder().encodeToString(SECRET_KEY.getBytes())
+                Base64.getEncoder().encodeToString(secretKey.getBytes())
         );
         return Keys.hmacShaKeyFor(keyBytes);
     }

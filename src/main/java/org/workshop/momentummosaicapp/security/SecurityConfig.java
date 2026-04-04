@@ -1,7 +1,6 @@
 package org.workshop.momentummosaicapp.security;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,8 +9,8 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -25,11 +24,6 @@ import java.util.List;
 public class SecurityConfig {
 
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
-    private final ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider;
-
-    @Value("${app.frontend.url}")
-    private String frontendUrl;
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
@@ -43,26 +37,27 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
+                        // ✅ PUBLIC endpoints FIRST
                         .requestMatchers(
                                 "/oauth2/**",
                                 "/login/**",
                                 "/error",
                                 "/api/auth/google/login",
-                                "/api/auth/google/callback",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/auth/callback"
+                                "/api/auth/google/callback","/swagger-ui/**",
+                                "/v3/api-docs/**","/auth/callback"
                         ).permitAll()
+
+                        // ✅ Authenticated endpoints
                         .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/api/profile/**").authenticated()
-                        .anyRequest().authenticated()
-                );
 
-        if (clientRegistrationRepositoryProvider.getIfAvailable() != null) {
-            http.oauth2Login(oauth ->
-                    oauth.successHandler(oAuth2LoginSuccessHandler)
-            );
-        }
+                        // ✅ Everything else
+                        .anyRequest().authenticated()
+                )
+
+                .oauth2Login(oauth ->
+                        oauth.successHandler(oAuth2LoginSuccessHandler)
+                );
 
         return http.build();
     }
@@ -70,7 +65,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(frontendUrl));
+        config.setAllowedOrigins(List.of("http://localhost:3000","https://momentum-mosaic-app.vercel.app"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

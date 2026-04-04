@@ -48,6 +48,8 @@ services:
       # Browser requests
       NEXT_PUBLIC_API_URL: http://localhost:8080
 
+      NEXT_PUBLIC_API_BASE_URL: momentummosaicapp-production.up.railway.app
+
       # Server-side requests
       INTERNAL_API_URL: http://backend:8080
 
