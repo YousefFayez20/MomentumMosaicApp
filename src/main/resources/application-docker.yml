@@ -28,7 +28,7 @@ spring:
 app:
   frontend:
     url: ${FRONTEND_URL:http://localhost:3000}
-jwt:
-  secret:${JWT_SECRET}
+  jwt:
+    secret: ${JWT_SECRET:MY_SUPER_SECRET_KEY_MY_SUPER_SECRET_KEY_123456}
 
 
