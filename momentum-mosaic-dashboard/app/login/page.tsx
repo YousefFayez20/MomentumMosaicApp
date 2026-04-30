@@ -8,7 +8,8 @@ import { Activity, Zap } from "lucide-react"
 export default function LoginPage() {
   const handleGoogleLogin = () => {
     // Redirect to backend OAuth endpoint
-    window.location.href = `${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080"}/oauth2/authorization/google`
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080"
+    window.location.href = `${apiBaseUrl}/oauth2/authorization/google`
   }
 
   return (
