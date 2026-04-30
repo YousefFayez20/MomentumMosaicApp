@@ -39,19 +39,18 @@ services:
 
 
   frontend:
-    build: ./momentum-mosaic-dashboard
+    build:
+      context: ./momentum-mosaic-dashboard
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8080
     container_name: momentum-frontend
     ports:
       - "3000:3000"
     depends_on:
       - backend
     environment:
-      # Browser requests
+      # Runtime env vars (for server-side code)
       NEXT_PUBLIC_API_URL: http://localhost:8080
-
-      NEXT_PUBLIC_API_BASE_URL: momentummosaicapp-production.up.railway.app
-
-      # Server-side requests
       INTERNAL_API_URL: http://backend:8080
 
 

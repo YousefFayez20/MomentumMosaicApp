@@ -8,7 +8,7 @@ server:
         secure: true
 spring:
   datasource:
-    url: jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/${DB_NAME:momentum}
+    url: jdbc:mysql://${DB_HOST:mysql}:${DB_PORT:3306}/${DB_NAME:momentum}?useSSL=true&requireSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: ${DB_USER:momentum}
     password: ${DB_PASSWORD:momentum}
     driver-class-name: com.mysql.cj.jdbc.Driver

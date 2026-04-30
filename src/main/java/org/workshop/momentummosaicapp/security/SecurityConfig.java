@@ -28,6 +28,7 @@ public class SecurityConfig {
 
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -55,7 +56,7 @@ public class SecurityConfig {
                                 "/error",
                                 "/api/auth/google/login",
                                 "/api/auth/google/callback","/swagger-ui/**",
-                                "/v3/api-docs/**","/auth/callback"
+                                "/v3/api-docs/**"
                         ).permitAll()
 
                         // ✅ Authenticated endpoints
@@ -66,9 +67,14 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
-                .oauth2Login(oauth ->
-                        oauth.successHandler(oAuth2LoginSuccessHandler)
+                .oauth2Login(oauth -> oauth
+                        .authorizationEndpoint(authorization -> authorization
+                                .authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository)
+                        )
+                        .successHandler(oAuth2LoginSuccessHandler)
                 )
+
+
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
