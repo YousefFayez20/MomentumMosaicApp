@@ -5,7 +5,8 @@ import type React from "react"
 import { useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
-import { Activity, LayoutDashboard, ListTodo, Dumbbell, Menu, LogOut, X } from "lucide-react"
+import { AppLogo } from "@/components/app-logo"
+import { LayoutDashboard, ListTodo, Dumbbell, Menu, LogOut, X } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -24,16 +25,11 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-br from-primary/5 via-background to-accent/5">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-sm">
+      <header className="sticky top-0 z-50 border-b bg-card/85 shadow-sm shadow-primary/5 backdrop-blur-sm">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Activity className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-xl font-bold">
-              Momentum <span className="text-primary">Mosaic</span>
-            </h1>
-          </div>
+          <Link href="/dashboard" aria-label="Go to Momentum Mosaic dashboard">
+            <AppLogo size="header" wordmarkClassName="hidden sm:inline" />
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden items-center gap-2 md:flex">

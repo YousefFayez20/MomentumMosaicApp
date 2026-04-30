@@ -22,11 +22,12 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
 
-        return Map.of(
-                "email", user.getEmail(),
-                "name", user.getAttributes().get("name"),
-                "userId", user.getUserId(),
-                "profileCompleted", user.isProfileCompleted()
-        );
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("email", user.getEmail());
+        response.put("name", user.getDisplayName());
+        response.put("userId", user.getUserId());
+        response.put("profileCompleted", user.isProfileCompleted());
+
+        return response;
     }
 }

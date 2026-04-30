@@ -26,6 +26,8 @@ import java.io.IOException;
 public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final AppUserRepository appUserRepository;
+    private final JwtService jwtService;
+    
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
@@ -54,25 +56,8 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
         AppUserPrincipal principal =
                 new AppUserPrincipal(user, oauthUser.getAttributes());
 
-        Authentication newAuth = new UsernamePasswordAuthenticationToken(
-                principal,
-                null,
-                principal.getAuthorities()
-        );
-
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(newAuth);
-
-        SecurityContextHolder.setContext(context);
-
-        // 🔴 THIS IS THE MISSING LINE
-        request.getSession(true)
-                .setAttribute(
-                        HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                        context
-                );
-
-       response.sendRedirect(frontendUrl+"/auth/callback");
+        String token = jwtService.generateToken(user);
+        response.sendRedirect(frontendUrl + "/auth/callback?token=" + token);
 
     }
 }

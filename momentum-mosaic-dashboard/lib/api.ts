@@ -18,13 +18,21 @@ export class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`
 
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string> || {}),
+    }
+
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("jwt_token")
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`
+      }
+    }
+
     const response = await fetch(url, {
       ...options,
-      credentials: "include", // Always include cookies for session auth
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
+      headers,
     })
 
     if (!response.ok) {

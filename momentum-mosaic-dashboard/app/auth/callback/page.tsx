@@ -1,20 +1,27 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useEffect, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import type { ApiError } from "@/lib/api"
 import { Loader2 } from "lucide-react"
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const router = useRouter()
   const { refetchUser } = useAuth()
   const [error, setError] = useState<string | null>(null)
+
+  const searchParams = useSearchParams()
+  const token = searchParams.get("token")
 
   useEffect(() => {
     const handleCallback = async () => {
       try {
         console.log("[v0] Auth callback: Fetching user data")
+
+        if (token) {
+          localStorage.setItem("jwt_token", token)
+        }
 
         // Call /api/auth/me to get authenticated user
         const userData = await refetchUser()
@@ -54,7 +61,7 @@ export default function AuthCallbackPage() {
     }
 
     handleCallback()
-  }, [router, refetchUser])
+  }, [router, refetchUser, token])
 
   if (error) {
     return (
@@ -71,5 +78,18 @@ export default function AuthCallbackPage() {
       <p className="text-lg font-medium">Completing sign in...</p>
       <p className="text-sm text-muted-foreground">Please wait while we set up your account</p>
     </div>
+  )
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-lg font-medium">Loading...</p>
+      </div>
+    }>
+      <AuthCallbackContent />
+    </Suspense>
   )
 }

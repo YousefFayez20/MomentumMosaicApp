@@ -11,6 +11,7 @@ import { Flame, Target, Zap, TrendingUp, Activity, Clock, Brain, Dumbbell, Utens
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
+import { BrandedLoader } from "@/components/branded-loader"
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -70,9 +71,7 @@ export default function DashboardPage() {
     return (
       <AuthGuard>
         <DashboardLayout>
-          <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </div>
+          <BrandedLoader className="h-[calc(100vh-4rem)]" label="Loading dashboard" />
         </DashboardLayout>
       </AuthGuard>
     )

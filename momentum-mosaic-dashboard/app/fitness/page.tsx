@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Flame, Activity, TrendingUp, Calendar, CheckCircle2, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
+import { BrandedLoader } from "@/components/branded-loader"
 
 export default function FitnessPage() {
   const { user } = useAuth()
@@ -110,9 +111,7 @@ export default function FitnessPage() {
     return (
       <AuthGuard>
         <DashboardLayout>
-          <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </div>
+          <BrandedLoader className="h-[calc(100vh-4rem)]" label="Loading fitness tracking" />
         </DashboardLayout>
       </AuthGuard>
     )

@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useRouter } from "next/navigation"
-import { Activity } from "lucide-react"
 import { AuthGuard } from "@/components/auth-guard"
+import { AppLogo } from "@/components/app-logo"
 
 export default function CompleteProfilePage() {
   const { user, refetchUser } = useAuth()
@@ -75,16 +75,9 @@ export default function CompleteProfilePage() {
   return (
     <AuthGuard requireCompleteProfile={false}>
       <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
-        <div className="mb-8 flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary">
-            <Activity className="h-7 w-7 text-primary-foreground" />
-          </div>
-          <h1 className="text-4xl font-bold tracking-tight">
-            Momentum <span className="text-primary">Mosaic</span>
-          </h1>
-        </div>
+        <AppLogo size="hero" priority className="mb-8 flex-col text-center sm:flex-row sm:text-left" />
 
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md border-primary/10 shadow-xl shadow-primary/5">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold">Complete Your Profile</CardTitle>
             <CardDescription>

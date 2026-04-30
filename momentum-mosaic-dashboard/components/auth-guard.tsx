@@ -3,10 +3,11 @@
 import type React from "react"
 
 import { useAuth } from "@/contexts/auth-context"
+import { BrandedLoader } from "@/components/branded-loader"
+import { Button } from "@/components/ui/button"
 import { useRouter, usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import type { ApiError } from "@/lib/api"
-import { Loader2 } from "lucide-react"
 
 export function AuthGuard({
   children,
@@ -61,9 +62,10 @@ export function AuthGuard({
 
   if (checking) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
+      <BrandedLoader
+        className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5"
+        label="Checking authentication"
+      />
     )
   }
 
@@ -111,5 +113,3 @@ function AuthGuardContent({
 
   return <>{children}</>
 }
-// Add import for Button at top if missing, or use simple button
-import { Button } from "@/components/ui/button"

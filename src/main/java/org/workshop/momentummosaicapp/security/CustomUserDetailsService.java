@@ -7,6 +7,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.workshop.momentummosaicapp.user.AppUser;
 import org.workshop.momentummosaicapp.user.AppUserRepository;
+import org.workshop.momentummosaicapp.user.AppUserPrincipal;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +23,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                         new UsernameNotFoundException("User not found: " + email)
                 );
 
-        return new CurrentUser(appUser);
+        return new AppUserPrincipal(appUser, Map.of());
     }
 }

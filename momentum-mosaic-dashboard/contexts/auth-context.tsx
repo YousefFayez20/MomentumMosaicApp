@@ -65,6 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null)
     setError(null)
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("jwt_token")
+    }
     router.push("/login")
   }
 
