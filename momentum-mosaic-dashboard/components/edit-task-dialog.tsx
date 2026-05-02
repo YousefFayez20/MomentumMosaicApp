@@ -70,7 +70,7 @@ export function EditTaskDialog({ task, open, onOpenChange, onSuccess }: EditTask
 
     try {
       setLoading(true)
-      await apiClient.updateTask(user.userId, task.id, {
+      await apiClient.updateTask(task.id, {
         title: formData.title,
         taskType: formData.taskType as "DEEP" | "SHALLOW" | "FITNESS",
         durationMinutes,

@@ -57,7 +57,7 @@ public class FitnessController {
         Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
         return fitnessService.getWorkoutStreak(userId);
     }
-    @GetMapping("/{userId}/macros")
+    @GetMapping("/macros")
     public UserSummary getMacros(Authentication authentication){
         if(authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal)){
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");

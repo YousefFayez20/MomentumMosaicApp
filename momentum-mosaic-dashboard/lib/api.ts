@@ -109,51 +109,49 @@ export class ApiClient {
   }
 
   // Dashboard endpoint
-  async getDashboard(userId: number) {
-    return this.request<DashboardResponse>(`/api/dashboard/${userId}`)
+  async getDashboard() {
+    return this.request<DashboardResponse>(`/api/dashboard`)
   }
 
   // Fitness endpoints
-  async markWorkout(userId: number, didWorkout: boolean) {
-    return this.request(`/api/fitness/${userId}/workout`, {
+  async markWorkout(didWorkout: boolean) {
+    return this.request(`/api/fitness/workout`, {
       method: "POST",
       body: JSON.stringify({ didWorkout }),
     })
   }
 
-  async getTodayFitness(userId: number) {
-    return this.request<{ didWorkout: boolean; date: string; summary: UserSummary }>(`/api/fitness/${userId}/today`)
+  async getTodayFitness() {
+    return this.request<{ didWorkout: boolean; date: string; summary: UserSummary }>(`/api/fitness/today`)
   }
 
-  async getTotalWorkoutDays(userId: number) {
-    return this.request<number>(`/api/fitness/${userId}/total-days`)
+  async getTotalWorkoutDays() {
+    return this.request<number>(`/api/fitness/total-days`)
   }
 
-  async getWorkoutStreak(userId: number) {
-    return this.request<number>(`/api/fitness/${userId}/streak`)
+  async getWorkoutStreak() {
+    return this.request<number>(`/api/fitness/streak`)
   }
 
-  async getMacros(userId: number) {
-    return this.request<UserSummary>(`/api/fitness/${userId}/macros`)
+  async getMacros() {
+    return this.request<UserSummary>(`/api/fitness/macros`)
   }
 
   // Task endpoints
   async createTask(
-    userId: number,
     data: {
       title: string
       taskType: "DEEP" | "SHALLOW" | "FITNESS"
       durationMinutes: number
     },
   ) {
-    return this.request<TaskResponse>(`/api/tasks/${userId}`, {
+    return this.request<TaskResponse>(`/api/tasks`, {
       method: "POST",
       body: JSON.stringify(data),
     })
   }
 
   async updateTask(
-    userId: number,
     taskId: number,
     data: {
       title?: string
@@ -161,28 +159,28 @@ export class ApiClient {
       durationMinutes?: number
     },
   ) {
-    return this.request<TaskResponse>(`/api/tasks/${userId}/${taskId}`, {
+    return this.request<TaskResponse>(`/api/tasks/${taskId}`, {
       method: "PUT",
       body: JSON.stringify(data),
     })
   }
 
-  async completeTask(userId: number, taskId: number) {
-    return this.request(`/api/tasks/${userId}/${taskId}/complete`, {
+  async completeTask(taskId: number) {
+    return this.request(`/api/tasks/${taskId}/complete`, {
       method: "PUT",
     })
   }
 
-  async deleteTask(userId: number, taskId: number) {
-    return this.request(`/api/tasks/${userId}/${taskId}`, {
+  async deleteTask(taskId: number) {
+    return this.request(`/api/tasks/${taskId}`, {
       method: "DELETE",
     })
   }
 
-  async getTasks(userId: number) {
+  async getTasks() {
     const [active, completed] = await Promise.all([
-      this.request<TaskResponse[]>(`/api/tasks/active/${userId}`),
-      this.request<TaskResponse[]>(`/api/tasks/completed/${userId}`),
+      this.request<TaskResponse[]>(`/api/tasks/active`),
+      this.request<TaskResponse[]>(`/api/tasks/completed`),
     ])
     return [...active, ...completed]
   }
