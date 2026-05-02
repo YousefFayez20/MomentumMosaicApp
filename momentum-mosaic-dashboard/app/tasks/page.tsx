@@ -33,7 +33,7 @@ export default function TasksPage() {
 
     try {
       setLoading(true)
-      const data = await apiClient.getTasks(user.userId)
+      const data = await apiClient.getTasks()
       setTasks(data)
     } catch (err) {
       const apiError = err as ApiError
@@ -67,7 +67,7 @@ export default function TasksPage() {
     if (!user?.userId) return
 
     try {
-      await apiClient.completeTask(user.userId, taskId)
+      await apiClient.completeTask(taskId)
       toast({
         title: "Success",
         description: "Task marked as complete!",
@@ -87,7 +87,7 @@ export default function TasksPage() {
     if (!user?.userId) return
 
     try {
-      await apiClient.deleteTask(user.userId, taskId)
+      await apiClient.deleteTask(taskId)
       toast({
         title: "Success",
         description: "Task deleted successfully",

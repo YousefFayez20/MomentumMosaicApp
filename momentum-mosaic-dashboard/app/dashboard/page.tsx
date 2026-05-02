@@ -36,7 +36,7 @@ export default function DashboardPage() {
 
       try {
         setLoading(true)
-        const data = await apiClient.getDashboard(user.userId)
+        const data = await apiClient.getDashboard()
         setDashboard(data)
         setError("")
       } catch (err) {

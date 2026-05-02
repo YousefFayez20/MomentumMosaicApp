@@ -2,12 +2,16 @@ package org.workshop.momentummosaicapp.controller;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.workshop.momentummosaicapp.task.Task;
 import org.workshop.momentummosaicapp.task.TaskService;
 import org.workshop.momentummosaicapp.task.dto.TaskRequest;
 import org.workshop.momentummosaicapp.task.dto.TaskResponse;
+import org.workshop.momentummosaicapp.user.AppUserPrincipal;
 import org.workshop.momentummosaicapp.utility.DtoMapper;
 
 import java.util.List;
@@ -21,42 +25,66 @@ public class TaskController {
     private final TaskService taskService;
     private final DtoMapper dtoMapper;
 
-    @PostMapping("/{userId}")
-    public TaskResponse createTask(@PathVariable Long userId, @RequestBody @Valid TaskRequest request){
+    @PostMapping()
+    public TaskResponse createTask(Authentication authentication, @RequestBody @Valid TaskRequest request){
+        if(authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal)){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        }
+        Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
         Task task = taskService.createTask(request.getTitle(),userId,request.getTaskType(),request.getDurationMinutes());
         return dtoMapper.taskToTaskResponse(task);
     }
-    @PutMapping("/{userId}/{taskId}")
+    @PutMapping("/{taskId}")
     public TaskResponse updateTask(
-            @PathVariable Long userId,
+            Authentication authentication,
             @PathVariable Long taskId,
             @RequestBody @Valid TaskRequest request){
+        if(authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal)){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        }
+        Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
 
         Task task = taskService.updateTask(userId,taskId,request.getTitle(),request.getTaskType(),request.getDurationMinutes());
         return dtoMapper.taskToTaskResponse(task);
     }
-    @DeleteMapping("/{userId}/{taskId}")
-    public void deleteTask(@PathVariable Long userId,
+    @DeleteMapping("/{taskId}")
+    public void deleteTask(Authentication authentication,
                            @PathVariable Long taskId){
+        if(authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal)){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        }
+        Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
         taskService.deleteTask(userId,taskId);
     }
 
-    @PutMapping("/{userId}/{taskId}/complete")
-    public TaskResponse completeTask(@PathVariable Long userId,
+    @PutMapping("/{taskId}/complete")
+    public TaskResponse completeTask(Authentication authentication,
                              @PathVariable Long taskId){
+        if(authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal)){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        }
+        Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
         Task task = taskService.completeTask(userId,taskId);
         return dtoMapper.taskToTaskResponse(task);
     }
 
-    @GetMapping("/active/{userId}")
-    public List<TaskResponse> getActiveTasks(@PathVariable Long userId){
+    @GetMapping("/active")
+    public List<TaskResponse> getActiveTasks(Authentication authentication){
+        if(authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal)){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        }
+        Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
         List<Task> tasks = taskService.getActiveTasks(userId);
 
         return tasks.stream().map(dtoMapper::taskToTaskResponse).toList();
     }
 
-    @GetMapping("/completed/{userId}")
-    public List<TaskResponse> getCompletedTasks(@PathVariable Long userId){
+    @GetMapping("/completed")
+    public List<TaskResponse> getCompletedTasks(Authentication authentication){
+        if(authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal)){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        }
+        Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
         List<Task> tasks = taskService.getCompletedTasks(userId);
         return tasks.stream().map(dtoMapper::taskToTaskResponse).toList();
     }

@@ -36,9 +36,9 @@ export default function FitnessPage() {
 
       // Fetch safe data (stats & macros)
       const tasks = [
-        apiClient.getTotalWorkoutDays(user.userId),
-        apiClient.getWorkoutStreak(user.userId),
-        apiClient.getMacros(user.userId),
+        apiClient.getTotalWorkoutDays(),
+        apiClient.getWorkoutStreak(),
+        apiClient.getMacros(),
       ]
 
       const [totalDaysData, streakData, macrosData] = await Promise.all(tasks)
@@ -49,11 +49,10 @@ export default function FitnessPage() {
 
       // Try to fetch today's log, handle 404 if not found
       try {
-        const todayData = await apiClient.getTodayFitness(user.userId)
+        const todayData = await apiClient.getTodayFitness()
         setTodayLog(todayData)
       } catch (err) {
         // If 404, it means no log exists for today, which is fine
-        // any other error we might want to log, but 404 is expected
         console.log("No workout log found for today (this is normal for a new day)")
         setTodayLog(null)
       }
@@ -84,7 +83,7 @@ export default function FitnessPage() {
 
     try {
       setSubmitting(true)
-      await apiClient.markWorkout(user.userId, didWorkout)
+      await apiClient.markWorkout(didWorkout)
 
       // Refresh data to update stats
       await fetchFitnessData()
@@ -107,7 +106,6 @@ export default function FitnessPage() {
   }
 
   if (loading) {
-    // ... (loading state remains the same)
     return (
       <AuthGuard>
         <DashboardLayout>
@@ -121,7 +119,6 @@ export default function FitnessPage() {
     <AuthGuard>
       <DashboardLayout>
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-          {/* ... (Header and Stats Grid remain the same) */}
           <div className="mb-8">
             <h2 className="text-3xl font-bold tracking-tight">Fitness Tracking</h2>
             <p className="text-muted-foreground">Track your workout consistency and build momentum</p>

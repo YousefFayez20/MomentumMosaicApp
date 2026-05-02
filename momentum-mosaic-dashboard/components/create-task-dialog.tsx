@@ -61,7 +61,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
 
     try {
       setLoading(true)
-      await apiClient.createTask(user.userId, {
+      await apiClient.createTask({
         title: formData.title,
         taskType: formData.taskType,
         durationMinutes,

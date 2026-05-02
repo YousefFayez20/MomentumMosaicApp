@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.workshop.momentummosaicapp.user.AppUser;
@@ -16,9 +15,6 @@ import org.workshop.momentummosaicapp.user.dto.CreateUserRequest;
 import org.workshop.momentummosaicapp.user.dto.UpdateUserRequest;
 import org.workshop.momentummosaicapp.user.dto.UserResponse;
 import org.workshop.momentummosaicapp.utility.DtoMapper;
-
-import java.util.Map;
-
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -34,14 +30,22 @@ public class UserController {
       AppUser appUser =  appUserService.createUser(request.getName(),request.getGender(), request.getHeightCm(), request.getWeightKg());
         return dtoMapper.userToUserResponse(appUser);
     }
-    @GetMapping("/{userId}")
-    public UserResponse getUser(@PathVariable Long userId){
+    @GetMapping()
+    public UserResponse getUser(Authentication authentication){
+        if(authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal)){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        }
+        Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
         AppUser appUser = appUserService.getUser(userId);
         return dtoMapper.userToUserResponse(appUser);
     }
     @PutMapping("/{userId}")
-    public UserResponse updateUser(@PathVariable Long userId, @RequestBody @Valid UpdateUserRequest request){
-         AppUser appUser = appUserService.updateUser(userId, request.getHeightCm(), request.getWeightKg());
+    public UserResponse updateUser(Authentication authentication, @RequestBody @Valid UpdateUserRequest request){
+        if(authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal)){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        }
+        Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
+        AppUser appUser = appUserService.updateUser(userId, request.getHeightCm(), request.getWeightKg());
         return dtoMapper.userToUserResponse(appUser);
     }
 
