@@ -29,22 +29,7 @@ public class DashboardServiceImpl implements DashboardService{
     @Override
     public DashboardResponse getDashboard(Long userId) {
         AppUser appUser = getUserOrThrow(userId);
-        double proteinMin = appUser.getWeightKg()*1.6;
-        double proteinMax = appUser.getWeightKg()*2.2;
-        //calculating calorie targets
-        int maintenance = appUser.getWeightKg()*33;
-        int cut = maintenance-300;
-        int bulk = maintenance+300;
-        UserSummary userSummary = UserSummary.builder().heightCm(appUser.getHeightCm())
-                .weightKg(appUser.getWeightKg())
-                .gender(appUser.getGender())
-                .caloriesCut(cut)
-                .caloriesBulk(bulk)
-                .proteinMax(proteinMax)
-                .proteinMin(proteinMin)
-                .caloriesMaintenance(maintenance)
-                .build();
-
+        UserSummary userSummary = fitnessService.getUserSummary(userId);
         List<Task> active = taskRepository.findByAppUserIdAndCompletedFalse(userId);
         List<Task> completed = taskRepository.findByAppUserIdAndCompletedTrue(userId);
         List<TaskItem> activeItems= active.stream().map(task -> toTaskItem(task)

@@ -2,6 +2,7 @@ package org.workshop.momentummosaicapp.user;
 
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -17,6 +18,7 @@ import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundExceptio
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class AppUserServiceImpl implements AppUserService {
 
     private final AppUserRepository appUserRepository;

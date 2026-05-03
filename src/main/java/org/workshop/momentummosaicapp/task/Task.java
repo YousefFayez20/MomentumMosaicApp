@@ -16,6 +16,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @Setter
 @Getter
+@Table(indexes = @Index(name = "idx_task_user_completed", columnList ="appUser,completed"))
 public class Task {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
