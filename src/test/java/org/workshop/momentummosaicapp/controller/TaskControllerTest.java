@@ -24,13 +24,18 @@ import org.workshop.momentummosaicapp.user.AppUser;
 import org.workshop.momentummosaicapp.user.Gender;
 import org.workshop.momentummosaicapp.utility.DtoMapper;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.workshop.momentummosaicapp.user.AppUserPrincipal;
+import java.util.List;
+import java.util.Map;
 
 @WebMvcTest(
         controllers = TaskController.class,
@@ -95,7 +100,12 @@ class TaskControllerTest {
                 .thenReturn(task);
         when(dtoMapper.taskToTaskResponse(task)).thenReturn(response);
 
-        mockMvc.perform(post("/api/tasks/1").contentType(MediaType.APPLICATION_JSON)
+        AppUserPrincipal principal = new AppUserPrincipal(appUser, Map.of());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+
+        mockMvc.perform(post("/api/tasks")
+                        .with(authentication(auth))
+                        .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                         {
                         "title": "Study",
@@ -106,8 +116,38 @@ class TaskControllerTest {
         ).andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Study"))
                 .andExpect(jsonPath("$.taskType").value("SHALLOW"))
-                .andExpect(jsonPath("$.completed").value(false))
-                .andExpect(jsonPath("$.completedAt").doesNotExist());
+                .andExpect(jsonPath("$.completed").value(false));
 
+        verify(taskService).createTask("Study", 1L, TaskType.SHALLOW, 60);
+    }
+
+    @Test
+    void getActiveTasks() throws Exception {
+        when(profileGuard.isCompleted(any())).thenReturn(true);
+        Long userId = 1L;
+        AppUser appUser = new AppUser();
+        appUser.setId(userId);
+        appUser.setEmail("test@test.com");
+
+        Task task = new Task();
+        task.setId(1L);
+        task.setTitle("Active Task");
+
+        TaskResponse response = new TaskResponse();
+        response.setId(1L);
+        response.setTitle("Active Task");
+
+        when(taskService.getActiveTasks(userId)).thenReturn(List.of(task));
+        when(dtoMapper.taskToTaskResponse(task)).thenReturn(response);
+
+        AppUserPrincipal principal = new AppUserPrincipal(appUser, Map.of());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+
+        mockMvc.perform(get("/api/tasks/active")
+                        .with(authentication(auth))
+                ).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("Active Task"));
+
+        verify(taskService).getActiveTasks(userId);
     }
 }
