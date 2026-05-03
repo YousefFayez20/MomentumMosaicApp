@@ -30,25 +30,23 @@ public class FitnessServiceImpl implements FitnessService {
     @Override
     public int getTotalWorkoutDays(Long userId) {
         getUserOrThrow(userId);
-        List<DailyFitnessLog> logs = fitnessLogRepository.findByAppUserId(userId);
-
-        return (int)logs.stream().filter(DailyFitnessLog::isDidWorkout).count();
+        return fitnessLogRepository.countWorkoutDays(userId);
     }
 
     @Override
     public int getWorkoutStreak(Long userId) {
         int streak=0;
-        List<DailyFitnessLog> dailyFitnessLogs = fitnessLogRepository.findByAppUserId(userId);
-        dailyFitnessLogs.sort(Comparator.comparing(DailyFitnessLog::getDate).reversed());
-        LocalDate currentDate = LocalDate.now();
-        for (DailyFitnessLog log: dailyFitnessLogs){
-            if(log.getDate().equals(currentDate) && log.isDidWorkout()){
+        List<DailyFitnessLog> workoutLogs = fitnessLogRepository.findTopByAppUserIdOrderByDateDesc(userId);
+        LocalDate expectedDate = LocalDate.now();
+        for(DailyFitnessLog log : workoutLogs){
+            if(log.getDate().equals(expectedDate)){
                 streak++;
-                currentDate = currentDate.minusDays(1);
-            }else {
+                expectedDate = expectedDate.minusDays(1);
+            }else if(log.getDate().isBefore(expectedDate)){
                 break;
             }
         }
+
         return streak;
     }
 
