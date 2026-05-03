@@ -36,7 +36,7 @@ public class TaskServiceImpl implements TaskService{
     public Task updateTask(Long userId, Long taskId, String title, TaskType taskType, Integer durationMinutes) {
        Task task = getTaskOrThrow(taskId);
        validateOwnership(userId,task);
-       if(task.isCompleted()) throw new IllegalArgumentException("Cannot update a completed task");
+       if(task.isCompleted()) throw new BadRequestException("Cannot update a completed task");
        validateTaskDuration(taskType,durationMinutes);
        task.setTitle(title);
        task.setTaskType(taskType);
