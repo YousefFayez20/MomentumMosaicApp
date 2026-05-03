@@ -1,6 +1,7 @@
 package org.workshop.momentummosaicapp.fitness;
 
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage.UserSummary;
@@ -20,6 +21,7 @@ public class FitnessServiceImpl implements FitnessService {
     private final DailyFitnessLogRepository fitnessLogRepository;
     private final AppUserRepository appUserRepository;
     @Override
+    @Transactional
     public void markWorkoutToday(Long userId, boolean didWorkout) {
         AppUser appUser = getUserOrThrow(userId);
         DailyFitnessLog todaylog = getOrCreateTodayLog(appUser);
