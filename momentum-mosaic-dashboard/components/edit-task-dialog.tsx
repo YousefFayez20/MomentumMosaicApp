@@ -51,7 +51,7 @@ export function EditTaskDialog({ task, open, onOpenChange, onSuccess }: EditTask
 
     if (!formData.title || !formData.durationMinutes) {
       toast({
-        title: "Error",
+        title: "Missing details",
         description: "Please fill in all fields",
         variant: "destructive",
       })
@@ -61,7 +61,7 @@ export function EditTaskDialog({ task, open, onOpenChange, onSuccess }: EditTask
     const durationMinutes = Number.parseInt(formData.durationMinutes)
     if (durationMinutes < 1) {
       toast({
-        title: "Error",
+        title: "Invalid duration",
         description: "Duration must be at least 1 minute",
         variant: "destructive",
       })
@@ -76,15 +76,15 @@ export function EditTaskDialog({ task, open, onOpenChange, onSuccess }: EditTask
         durationMinutes,
       })
       toast({
-        title: "Success",
-        description: "Task updated successfully!",
+        title: "Task updated",
+        description: "Your changes have been saved.",
       })
       onOpenChange(false)
       onSuccess()
     } catch (err) {
       toast({
-        title: "Error",
-        description: "Failed to update task",
+        title: "Could not update task",
+        description: "Please try again.",
         variant: "destructive",
       })
       console.error(err)
@@ -98,7 +98,7 @@ export function EditTaskDialog({ task, open, onOpenChange, onSuccess }: EditTask
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Edit Task</DialogTitle>
-          <DialogDescription>Update your task details</DialogDescription>
+          <DialogDescription>Adjust your plan as needed</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

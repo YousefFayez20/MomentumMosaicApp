@@ -19,7 +19,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md border-primary/10 shadow-xl shadow-primary/5">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-          <CardDescription>Sign in to track your fitness and productivity journey</CardDescription>
+          <CardDescription>Sign in to structure your day and build consistency</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Button onClick={handleGoogleLogin} size="lg" className="w-full gap-2" variant="default">
@@ -49,7 +49,7 @@ export default function LoginPage() {
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Why Momentum Mosaic?</span>
+              <span className="bg-card px-2 text-muted-foreground">Built for daily discipline</span>
             </div>
           </div>
 
@@ -59,8 +59,8 @@ export default function LoginPage() {
                 <Activity className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium">Track Fitness & Tasks</p>
-                <p className="text-xs text-muted-foreground">Combine workout tracking with productivity</p>
+                <p className="text-sm font-medium">Structure Your Day</p>
+                <p className="text-xs text-muted-foreground">Plan, execute, and complete with intention</p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -68,8 +68,8 @@ export default function LoginPage() {
                 <Zap className="h-4 w-4 text-accent" />
               </div>
               <div>
-                <p className="text-sm font-medium">Build Momentum</p>
-                <p className="text-xs text-muted-foreground">See your streaks and stay motivated</p>
+                <p className="text-sm font-medium">Build Consistency</p>
+                <p className="text-xs text-muted-foreground">Streaks and progress that reward daily discipline</p>
               </div>
             </div>
           </div>

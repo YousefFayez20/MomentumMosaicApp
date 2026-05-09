@@ -16,7 +16,6 @@ export const metadata: Metadata = {
   },
   applicationName: APP_NAME,
   description: APP_DESCRIPTION,
-  generator: "v0.app",
   appleWebApp: {
     title: APP_NAME,
     capable: true,

@@ -42,7 +42,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
 
     if (!formData.title || !formData.durationMinutes) {
       toast({
-        title: "Error",
+        title: "Missing details",
         description: "Please fill in all fields",
         variant: "destructive",
       })
@@ -52,7 +52,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
     const durationMinutes = Number.parseInt(formData.durationMinutes)
     if (durationMinutes < 1) {
       toast({
-        title: "Error",
+        title: "Invalid duration",
         description: "Duration must be at least 1 minute",
         variant: "destructive",
       })
@@ -67,16 +67,16 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
         durationMinutes,
       })
       toast({
-        title: "Success",
-        description: "Task created successfully!",
+        title: "Task added",
+        description: "It's been added to your active list.",
       })
       setFormData({ title: "", taskType: "DEEP", durationMinutes: "" })
       onOpenChange(false)
       onSuccess()
     } catch (err) {
       toast({
-        title: "Error",
-        description: "Failed to create task",
+        title: "Could not add task",
+        description: "Please try again.",
         variant: "destructive",
       })
       console.error(err)
@@ -90,7 +90,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create New Task</DialogTitle>
-          <DialogDescription>Add a new task to track your productivity</DialogDescription>
+          <DialogDescription>What are you committing to today?</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
