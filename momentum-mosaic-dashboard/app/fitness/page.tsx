@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
-import { apiClient, type ApiError, type UserSummary } from "@/lib/api"
+import { apiClient, type ApiError } from "@/lib/api"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { AuthGuard } from "@/components/auth-guard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Flame, Activity, TrendingUp, Calendar, CheckCircle2, XCircle } from "lucide-react"
+import { Flame, Activity, Calendar, CheckCircle2, XCircle, ShieldCheck } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { BrandedLoader } from "@/components/branded-loader"
@@ -17,9 +17,7 @@ export default function FitnessPage() {
   const { user } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
-  const [todayLog, setTodayLog] = useState<{ didWorkout: boolean; date: string; summary: UserSummary } | null>(null)
-  const [userMacros, setUserMacros] = useState<UserSummary | null>(null)
-  const [totalDays, setTotalDays] = useState(0)
+  const [todayLog, setTodayLog] = useState<{ didWorkout: boolean; date: string } | null>(null)
   const [streak, setStreak] = useState(0)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -33,32 +31,19 @@ export default function FitnessPage() {
 
     try {
       setLoading(true)
-
-      // Fetch safe data (stats & macros)
-      const tasks = [
-        apiClient.getTotalWorkoutDays(),
-        apiClient.getWorkoutStreak(),
-        apiClient.getMacros(),
-      ]
-
-      const [totalDaysData, streakData, macrosData] = await Promise.all(tasks)
-
-      setTotalDays(totalDaysData as number)
+      const streakData = await apiClient.getWorkoutStreak()
       setStreak(streakData as number)
-      setUserMacros(macrosData as UserSummary)
 
-      // Try to fetch today's log, handle 404 if not found
       try {
         const todayData = await apiClient.getTodayFitness()
         setTodayLog(todayData)
       } catch (err) {
-        // If 404, it means no log exists for today, which is fine
         console.log("No workout log found for today (this is normal for a new day)")
         setTodayLog(null)
       }
     } catch (err) {
       const apiError = err as ApiError
-      console.error("[v0] Fitness fetch error:", apiError)
+      console.error("[Fitness] Fetch error:", apiError)
 
       if (apiError.status === 403 && apiError.error === "PROFILE_NOT_COMPLETED") {
         router.push("/complete-profile")
@@ -84,20 +69,18 @@ export default function FitnessPage() {
     try {
       setSubmitting(true)
       await apiClient.markWorkout(didWorkout)
-
-      // Refresh data to update stats
       await fetchFitnessData()
 
       toast({
-        title: didWorkout ? "Workout Logged!" : "Status Updated",
+        title: didWorkout ? "Workout logged" : "Workout removed",
         description: didWorkout
-          ? "Great job! Your consistency represents your character."
-          : "Status updated. Rest is important too.",
+          ? "Nice work. Your streak and status are up to date."
+          : "Today's workout status has been undone.",
       })
     } catch (err) {
       toast({
-        title: "Error",
-        description: "Failed to log workout. Please try again.",
+        title: "Could not update workout",
+        description: "Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -109,7 +92,7 @@ export default function FitnessPage() {
     return (
       <AuthGuard>
         <DashboardLayout>
-          <BrandedLoader className="h-[calc(100vh-4rem)]" label="Loading fitness tracking" />
+          <BrandedLoader className="h-[calc(100vh-4rem)]" label="Loading workout discipline" />
         </DashboardLayout>
       </AuthGuard>
     )
@@ -120,12 +103,11 @@ export default function FitnessPage() {
       <DashboardLayout>
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
           <div className="mb-8">
-            <h2 className="text-3xl font-bold tracking-tight">Fitness Tracking</h2>
-            <p className="text-muted-foreground">Track your workout consistency and build momentum</p>
+            <h2 className="text-3xl font-bold">Workout Discipline</h2>
+            <p className="text-muted-foreground">Log today's workout and protect your streak</p>
           </div>
 
-          {/* Stats Grid */}
-          <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mb-8 grid gap-4 sm:grid-cols-2">
             <Card className="border-primary/20 bg-gradient-to-br from-primary/10 to-transparent">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Current Streak</CardTitle>
@@ -137,18 +119,7 @@ export default function FitnessPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-accent/20 bg-gradient-to-br from-accent/10 to-transparent">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium">Total Workouts</CardTitle>
-                <Activity className="h-5 w-5 text-accent" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-4xl font-bold text-accent">{totalDays}</div>
-                <p className="text-xs text-muted-foreground">lifetime workouts</p>
-              </CardContent>
-            </Card>
-
-            <Card className="sm:col-span-2 lg:col-span-1">
+            <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Today's Status</CardTitle>
                 <Calendar className="h-5 w-5 text-chart-3" />
@@ -170,44 +141,6 @@ export default function FitnessPage() {
             </Card>
           </div>
 
-          {/* Nutrition Summary */}
-          {userMacros && (
-            <div className="mb-8">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-chart-2" />
-                    Daily Nutrition Targets
-                  </CardTitle>
-                  <CardDescription>Based on your profile ({userMacros.weightKg}kg)</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-lg border bg-card p-4">
-                      <p className="text-sm font-medium text-muted-foreground">Protein</p>
-                      <p className="text-2xl font-bold">
-                        {Math.round(userMacros.proteinMin)}-{Math.round(userMacros.proteinMax)}g
-                      </p>
-                    </div>
-                    <div className="rounded-lg border bg-card p-4">
-                      <p className="text-sm font-medium text-muted-foreground">Maintenance</p>
-                      <p className="text-2xl font-bold">{userMacros.caloriesMaintenance} kcal</p>
-                    </div>
-                    <div className="rounded-lg border bg-card p-4">
-                      <p className="text-sm font-medium text-muted-foreground">Cutting</p>
-                      <p className="text-2xl font-bold">{userMacros.caloriesCut} kcal</p>
-                    </div>
-                    <div className="rounded-lg border bg-card p-4">
-                      <p className="text-sm font-medium text-muted-foreground">Bulking</p>
-                      <p className="text-2xl font-bold">{userMacros.caloriesBulk} kcal</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Main Action Card */}
           <div className="grid gap-6 lg:grid-cols-2">
             <Card className="border-2 border-primary/20">
               <CardHeader>
@@ -215,9 +148,9 @@ export default function FitnessPage() {
                   <Activity className="h-5 w-5 text-primary" />
                   Log Today's Workout
                 </CardTitle>
-                <CardDescription>Mark whether you completed a workout today</CardDescription>
+                <CardDescription>Mark whether today's workout was completed</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-5">
                 <div className="flex flex-col gap-3">
                   {!todayLog?.didWorkout ? (
                     <>
@@ -245,8 +178,8 @@ export default function FitnessPage() {
                     <>
                       <div className="rounded-lg bg-primary/10 p-4 text-center">
                         <CheckCircle2 className="mx-auto mb-2 h-12 w-12 text-primary" />
-                        <p className="font-semibold text-primary">Workout Logged!</p>
-                        <p className="text-sm text-muted-foreground">Great job staying consistent</p>
+                        <p className="font-semibold text-primary">Workout logged</p>
+                        <p className="text-sm text-muted-foreground">Today's streak is protected.</p>
                       </div>
                       <Button
                         size="lg"
@@ -260,90 +193,50 @@ export default function FitnessPage() {
                     </>
                   )}
                 </div>
-
-                <div className="rounded-lg border bg-muted/50 p-4">
-                  <h4 className="mb-2 font-semibold">Workout Tips</h4>
-                  <ul className="space-y-1 text-sm text-muted-foreground">
-                    <li>• Consistency is key - aim for at least 3-4 workouts per week</li>
-                    <li>• Include both cardio and strength training</li>
-                    <li>• Don't forget rest days for recovery</li>
-                    <li>• Stay hydrated before, during, and after exercise</li>
-                  </ul>
-                </div>
               </CardContent>
             </Card>
 
-            {/* Motivation Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="h-5 w-5 text-accent" />
-                  Your Progress
+                  <ShieldCheck className="h-5 w-5 text-accent" />
+                  Streak Milestones
                 </CardTitle>
-                <CardDescription>Keep building your fitness momentum</CardDescription>
+                <CardDescription>Steady repetition is what turns this into a habit.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="rounded-lg border bg-card p-4">
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-sm font-medium">Workout Frequency</span>
-                      <Flame className="h-4 w-4 text-primary" />
-                    </div>
-                    <p className="text-2xl font-bold">{totalDays > 0 ? `${totalDays} total` : "Just starting"}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {streak > 0 ? `${streak} day streak!` : "Start your streak today"}
-                    </p>
+                <div className="rounded-lg border bg-card p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-sm font-medium">Current Position</span>
+                    <Badge variant={streak >= 7 ? "default" : "secondary"}>
+                      {streak >= 7 ? "Established" : "Building"}
+                    </Badge>
                   </div>
-
-                  <div className="rounded-lg border bg-card p-4">
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-sm font-medium">Streak Status</span>
-                      <Badge variant={streak >= 7 ? "default" : "secondary"}>
-                        {streak >= 7 ? "Strong" : "Building"}
-                      </Badge>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">7-day streak</span>
-                        <span className={streak >= 7 ? "text-primary font-semibold" : "text-muted-foreground"}>
-                          {streak >= 7 ? "Achieved! ✓" : `${Math.max(0, 7 - streak)} days to go`}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">14-day streak</span>
-                        <span className={streak >= 14 ? "text-primary font-semibold" : "text-muted-foreground"}>
-                          {streak >= 14 ? "Achieved! ✓" : `${Math.max(0, 14 - streak)} days to go`}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">30-day streak</span>
-                        <span className={streak >= 30 ? "text-primary font-semibold" : "text-muted-foreground"}>
-                          {streak >= 30 ? "Achieved! ✓" : `${Math.max(0, 30 - streak)} days to go`}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                  <p className="text-2xl font-bold">{streak > 0 ? `${streak} day streak` : "No streak yet"}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {streak > 0 ? "Keep showing up and let the streak compound." : "Log today to start the chain."}
+                  </p>
                 </div>
 
-                <div className="rounded-lg bg-accent/10 p-4">
-                  <p className="font-semibold text-accent">
-                    {streak === 0
-                      ? "Start your fitness journey today!"
-                      : streak < 3
-                        ? "You're off to a great start!"
-                        : streak < 7
-                          ? "Keep the momentum going!"
-                          : streak < 14
-                            ? "You're on fire! Keep it up!"
-                            : streak < 30
-                              ? "Incredible consistency! You're a champion!"
-                              : "You're a fitness legend! Outstanding dedication!"}
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {streak === 0
-                      ? "Log your first workout to start building a streak"
-                      : `You've completed ${totalDays} workouts. Every day counts!`}
-                  </p>
+                <div className="space-y-3">
+                  {[7, 14, 30].map((milestone) => {
+                    const achieved = streak >= milestone
+
+                    return (
+                      <div
+                        key={milestone}
+                        className="flex items-center justify-between rounded-lg border bg-muted/20 p-4 text-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Flame className={`h-4 w-4 ${achieved ? "text-primary" : "text-muted-foreground"}`} />
+                          <span className="font-medium">{milestone}-day streak</span>
+                        </div>
+                        <span className={achieved ? "font-semibold text-primary" : "text-muted-foreground"}>
+                          {achieved ? "Achieved" : `${Math.max(0, milestone - streak)} days to go`}
+                        </span>
+                      </div>
+                    )
+                  })}
                 </div>
               </CardContent>
             </Card>
