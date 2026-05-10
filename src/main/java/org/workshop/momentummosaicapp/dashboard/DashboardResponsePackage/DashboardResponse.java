@@ -12,4 +12,5 @@ public class DashboardResponse {
     private UserSummary userSummary;
     private TaskSummary taskSummary;
     private FitnessSummary fitnessSummary;
+    private int momentumScore;
 }

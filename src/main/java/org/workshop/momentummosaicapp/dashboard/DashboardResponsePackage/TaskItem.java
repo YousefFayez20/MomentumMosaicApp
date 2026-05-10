@@ -16,4 +16,7 @@ public class TaskItem {
     private int durationMinutes;
     private boolean completed;
     private Instant completedAt;
+    private org.workshop.momentummosaicapp.task.TaskStatus status;
+    private Instant startedAt;
+    private Integer actualMinutes;
 }

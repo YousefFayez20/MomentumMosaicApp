@@ -7,11 +7,12 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { AuthGuard } from "@/components/auth-guard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Clock, Activity, Mountain, ArrowRight, Brain, Zap, Dumbbell, Flame, Target, Check } from "lucide-react"
+import { CheckCircle2, Clock, Activity, Mountain, ArrowRight, Brain, Zap, Dumbbell, Flame, Target, Check, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { BrandedLoader } from "@/components/branded-loader"
 import { useToast } from "@/hooks/use-toast"
+import { TaskTimer } from "@/components/task-timer"
 
 const TASK_TYPE_ORDER: Array<TaskResponse["taskType"]> = ["DEEP", "SHALLOW", "FITNESS"]
 
@@ -72,6 +73,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null)
+  const [startingTaskId, setStartingTaskId] = useState<number | null>(null)
   const [workoutSubmitting, setWorkoutSubmitting] = useState(false)
 
   const fetchDashboard = async () => {
@@ -113,15 +115,43 @@ export default function DashboardPage() {
     fetchDashboard()
   }, [user, router])
 
+  const handleStartTask = async (taskId: number) => {
+    if (!user?.userId) return
+
+    try {
+      setStartingTaskId(taskId)
+      await apiClient.startTask(taskId)
+      toast({
+        title: "Focus session started",
+        description: "Stay focused. The clock is ticking.",
+      })
+      await fetchDashboard()
+    } catch (err) {
+      console.error("[Dashboard] Failed to start task:", err)
+      toast({
+        title: "Could not start session",
+        description: "Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setStartingTaskId(null)
+    }
+  }
+
   const handleCompleteTask = async (taskId: number) => {
     if (!user?.userId) return
 
     try {
       setCompletingTaskId(taskId)
-      await apiClient.completeTask(taskId)
+      const task = await apiClient.completeTask(taskId)
+      
+      const feedback = task.actualMinutes && task.actualMinutes > task.durationMinutes
+        ? `Completed in ${task.actualMinutes}m (estimated ${task.durationMinutes}m).`
+        : `Nice work. You finished in ${task.actualMinutes || task.durationMinutes}m.`
+
       toast({
         title: "Task completed",
-        description: "Nice work. Your dashboard has been updated.",
+        description: feedback,
       })
       await fetchDashboard()
     } catch (err) {
@@ -234,6 +264,19 @@ export default function DashboardPage() {
           <div className="reveal-up reveal-delay-1 mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Card className="border-l-4 border-l-primary bg-card/80">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Momentum Score</CardTitle>
+                <Zap className="h-5 w-5 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{dashboard.momentumScore}</div>
+                <p className="mt-1 text-xs font-medium text-muted-foreground">
+                  Your composite discipline signal
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-primary bg-card/80">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Workout Streak</CardTitle>
                 <Flame className="h-5 w-5 text-primary" />
               </CardHeader>
@@ -245,7 +288,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-emerald-500 bg-card/80">
+            <Card className="border-l-4 border-l-emerald-500 bg-card/80 sm:col-span-2 lg:col-span-1">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Today's Progress</CardTitle>
                 <CheckCircle2 className="h-5 w-5 text-emerald-500" />
@@ -255,17 +298,6 @@ export default function DashboardPage() {
                   {completedTodayCount} of {totalTaskCount}
                 </div>
                 <p className="mt-1 text-xs font-medium text-muted-foreground">tasks completed today</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-amber-500 bg-card/80 sm:col-span-2 lg:col-span-1">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Today's Focus Time</CardTitle>
-                <Clock className="h-5 w-5 text-amber-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{formatMinutes(completedTodayMinutes)}</div>
-                <p className="mt-1 text-xs font-medium text-muted-foreground">completed across today's finished tasks</p>
               </CardContent>
             </Card>
           </div>
@@ -323,21 +355,36 @@ export default function DashboardPage() {
                               </div>
                               <div className="min-w-0 space-y-3">
                                 <p className="line-clamp-2 min-h-10 font-semibold leading-tight">{task.title}</p>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <Clock className="h-4 w-4" />
-                                  <span>{task.durationMinutes} minutes</span>
-                                </div>
+                                {task.status === "IN_PROGRESS" ? (
+                                  <TaskTimer startedAt={task.startedAt} durationMinutes={task.durationMinutes} />
+                                ) : (
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <Clock className="h-4 w-4" />
+                                    <span>{task.durationMinutes} minutes</span>
+                                  </div>
+                                )}
                               </div>
 
-                              <Button
-                                className="mt-4 w-full gap-2"
-                                variant="secondary"
-                                onClick={() => handleCompleteTask(task.id)}
-                                disabled={completingTaskId === task.id}
-                              >
-                                <Check className="h-4 w-4" />
-                                {completingTaskId === task.id ? "Completing..." : "Mark Complete"}
-                              </Button>
+                              {task.status === "IN_PROGRESS" ? (
+                                <Button
+                                  className="mt-4 w-full gap-2 bg-indigo-600 hover:bg-indigo-700"
+                                  onClick={() => handleCompleteTask(task.id)}
+                                  disabled={completingTaskId === task.id}
+                                >
+                                  <Check className="h-4 w-4" />
+                                  {completingTaskId === task.id ? "Completing..." : "Complete Task"}
+                                </Button>
+                              ) : (
+                                <Button
+                                  className="mt-4 w-full gap-2"
+                                  variant="secondary"
+                                  onClick={() => handleStartTask(task.id)}
+                                  disabled={startingTaskId === task.id}
+                                >
+                                  <Play className="h-4 w-4" />
+                                  {startingTaskId === task.id ? "Starting..." : "Start Focus"}
+                                </Button>
+                              )}
                             </div>
                           ))}
                         </div>

@@ -165,8 +165,14 @@ export class ApiClient {
     })
   }
 
+  async startTask(taskId: number) {
+    return this.request<TaskResponse>(`/api/tasks/${taskId}/start`, {
+      method: "PUT",
+    })
+  }
+
   async completeTask(taskId: number) {
-    return this.request(`/api/tasks/${taskId}/complete`, {
+    return this.request<TaskResponse>(`/api/tasks/${taskId}/complete`, {
       method: "PUT",
     })
   }
@@ -194,6 +200,9 @@ export interface TaskResponse {
   durationMinutes: number
   completed: boolean
   completedAt: string | null
+  status: "PLANNED" | "IN_PROGRESS" | "COMPLETED"
+  startedAt: string | null
+  actualMinutes: number | null
 }
 
 export interface UserSummary {
@@ -225,6 +234,7 @@ export interface DashboardResponse {
   userSummary: UserSummary
   taskSummary: TaskSummary
   fitnessSummary: FitnessSummary
+  momentumScore: number
 }
 
 export const apiClient = new ApiClient()

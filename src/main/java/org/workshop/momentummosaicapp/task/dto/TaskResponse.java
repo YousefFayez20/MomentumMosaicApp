@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.workshop.momentummosaicapp.task.TaskStatus;
 import org.workshop.momentummosaicapp.task.TaskType;
 
 import java.time.Instant;
@@ -18,6 +19,8 @@ public class TaskResponse {
     private TaskType taskType;
     private Integer durationMinutes;
     private boolean completed;
-
     private Instant completedAt;
+    private TaskStatus status;
+    private Instant startedAt;
+    private Integer actualMinutes;
 }

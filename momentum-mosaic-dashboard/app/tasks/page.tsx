@@ -8,7 +8,7 @@ import { AuthGuard } from "@/components/auth-guard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Check, Trash2, Clock, Edit2, Brain, Zap, Dumbbell, ListTodo, History, Layers, CheckCircle2 } from "lucide-react"
+import { Plus, Check, Trash2, Clock, Edit2, Brain, Zap, Dumbbell, ListTodo, History, Layers, CheckCircle2, Play } from "lucide-react"
 import { CreateTaskDialog } from "@/components/create-task-dialog"
 import { EditTaskDialog } from "@/components/edit-task-dialog"
 import { useToast } from "@/hooks/use-toast"
@@ -62,6 +62,8 @@ export default function TasksPage() {
   const [loading, setLoading] = useState(true)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<TaskResponse | null>(null)
+  const [startingTaskId, setStartingTaskId] = useState<number | null>(null)
+  const [completingTaskId, setCompletingTaskId] = useState<number | null>(null)
 
   const fetchTasks = async () => {
     if (!user) return
@@ -102,14 +104,43 @@ export default function TasksPage() {
     fetchTasks()
   }, [user])
 
+  const handleStartTask = async (taskId: number) => {
+    if (!user?.userId) return
+
+    try {
+      setStartingTaskId(taskId)
+      await apiClient.startTask(taskId)
+      toast({
+        title: "Focus session started",
+        description: "Stay focused. The clock is ticking.",
+      })
+      fetchTasks()
+    } catch (err) {
+      console.error("[Tasks] Failed to start task:", err)
+      toast({
+        title: "Could not start session",
+        description: "Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setStartingTaskId(null)
+    }
+  }
+
   const handleCompleteTask = async (taskId: number) => {
     if (!user?.userId) return
 
     try {
-      await apiClient.completeTask(taskId)
+      setCompletingTaskId(taskId)
+      const task = await apiClient.completeTask(taskId)
+      
+      const feedback = task.actualMinutes && task.actualMinutes > task.durationMinutes
+        ? `Completed in ${task.actualMinutes}m (estimated ${task.durationMinutes}m).`
+        : `Nice work. You finished in ${task.actualMinutes || task.durationMinutes}m.`
+
       toast({
         title: "Task completed",
-        description: "Nice work. One less thing on the plate.",
+        description: feedback,
       })
       fetchTasks()
     } catch (err) {
@@ -119,6 +150,8 @@ export default function TasksPage() {
         variant: "destructive",
       })
       console.error(err)
+    } finally {
+      setCompletingTaskId(null)
     }
   }
 
@@ -286,14 +319,26 @@ export default function TasksPage() {
                                       <Clock className="h-4 w-4" />
                                       <span>{task.durationMinutes} minutes</span>
                                     </div>
-                                    <Button
-                                      onClick={() => handleCompleteTask(task.id)}
-                                      className="w-full gap-2"
-                                      variant="secondary"
-                                    >
-                                      <Check className="h-4 w-4" />
-                                      Mark Complete
-                                    </Button>
+                                    {task.status === "IN_PROGRESS" ? (
+                                      <Button
+                                        onClick={() => handleCompleteTask(task.id)}
+                                        className="w-full gap-2 bg-indigo-600 hover:bg-indigo-700"
+                                        disabled={completingTaskId === task.id}
+                                      >
+                                        <Check className="h-4 w-4" />
+                                        {completingTaskId === task.id ? "Completing..." : "Complete Task"}
+                                      </Button>
+                                    ) : (
+                                      <Button
+                                        onClick={() => handleStartTask(task.id)}
+                                        className="w-full gap-2"
+                                        variant="secondary"
+                                        disabled={startingTaskId === task.id}
+                                      >
+                                        <Play className="h-4 w-4" />
+                                        {startingTaskId === task.id ? "Starting..." : "Start Focus"}
+                                      </Button>
+                                    )}
                                   </div>
                                 </div>
                               ))}

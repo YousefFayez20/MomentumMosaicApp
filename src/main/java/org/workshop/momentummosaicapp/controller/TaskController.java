@@ -57,6 +57,17 @@ public class TaskController {
         taskService.deleteTask(userId,taskId);
     }
 
+    @PutMapping("/{taskId}/start")
+    public TaskResponse startTask(Authentication authentication,
+                                     @PathVariable Long taskId){
+        if(authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal)){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        }
+        Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
+        Task task = taskService.startTask(userId,taskId);
+        return dtoMapper.taskToTaskResponse(task);
+    }
+
     @PutMapping("/{taskId}/complete")
     public TaskResponse completeTask(Authentication authentication,
                              @PathVariable Long taskId){
