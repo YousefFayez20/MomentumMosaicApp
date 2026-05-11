@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.workshop.momentummosaicapp.user.AppUser;
 import org.workshop.momentummosaicapp.user.AppUserRepository;
 import org.workshop.momentummosaicapp.utility.exception.BadRequestException;
+import org.workshop.momentummosaicapp.utility.exception.ConflictException;
 import org.workshop.momentummosaicapp.utility.exception.ForbiddenException;
 import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
 
@@ -61,6 +62,9 @@ public class TaskServiceImpl implements TaskService{
         if (task.getStatus() != TaskStatus.PLANNED) {
             throw new BadRequestException("Task must be in PLANNED state to start");
         }
+        if(!taskRepository.findByAppUserIdAndStatus(userId, TaskStatus.IN_PROGRESS).isEmpty()){
+           throw new ConflictException("You Can't start another task while you there's another task in progress");
+        }
         task.setStatus(TaskStatus.IN_PROGRESS);
         task.setStartedAt(Instant.now());
         return taskRepository.save(task);
@@ -83,6 +87,20 @@ public class TaskServiceImpl implements TaskService{
 
         task.setStatus(TaskStatus.COMPLETED);
         task.setCompletedAt(now);
+        return taskRepository.save(task);
+    }
+
+    @Override
+    public Task abandonTask(Long userId, Long taskId) {
+        Task task = getTaskOrThrow(taskId);
+        validateOwnership(userId, task);
+        if(task.getStatus().equals(TaskStatus.IN_PROGRESS)){
+            task.setStatus(TaskStatus.PLANNED);
+        }else {
+            throw new BadRequestException("You can abandon only in progress tasks");
+        }
+        task.setStartedAt(null);
+        task.setActualMinutes(null);
         return taskRepository.save(task);
     }
 

@@ -19,6 +19,9 @@ public class DtoMapper {
         taskResponse.setTitle(task.getTitle());
         taskResponse.setDurationMinutes(task.getDurationMinutes());
         taskResponse.setCompletedAt(task.getCompletedAt());
+        taskResponse.setStatus(task.getStatus());
+        taskResponse.setStartedAt(task.getStartedAt());
+        taskResponse.setActualMinutes(task.getActualMinutes());
         return taskResponse;
     }
     public UserResponse userToUserResponse(AppUser appUser){

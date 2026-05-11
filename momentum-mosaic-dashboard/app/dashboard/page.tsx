@@ -7,12 +7,19 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { AuthGuard } from "@/components/auth-guard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { CheckCircle2, Clock, Activity, Mountain, ArrowRight, Brain, Zap, Dumbbell, Flame, Target, Check, Play } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  CheckCircle2, Clock, Activity, Mountain, ArrowRight,
+  Brain, Zap, Dumbbell, Flame, Target, Check, Play,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { BrandedLoader } from "@/components/branded-loader"
 import { useToast } from "@/hooks/use-toast"
 import { TaskTimer } from "@/components/task-timer"
+import { FocusMode } from "@/components/focus-mode"
+import { SessionComplete } from "@/components/session-complete"
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const TASK_TYPE_ORDER: Array<TaskResponse["taskType"]> = ["DEEP", "SHALLOW", "FITNESS"]
 
@@ -43,10 +50,11 @@ const TASK_TYPE_META: Record<
   },
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function formatMinutes(totalMinutes: number) {
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60
-
   if (hours === 0) return `${minutes}m`
   if (minutes === 0) return `${hours}h`
   return `${hours}h ${minutes}m`
@@ -54,10 +62,8 @@ function formatMinutes(totalMinutes: number) {
 
 function isToday(dateValue: string | null) {
   if (!dateValue) return false
-
   const date = new Date(dateValue)
   const now = new Date()
-
   return (
     date.getFullYear() === now.getFullYear() &&
     date.getMonth() === now.getMonth() &&
@@ -65,27 +71,30 @@ function isToday(dateValue: string | null) {
   )
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
   const { user } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
+
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+
+  // Action loading states
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null)
   const [startingTaskId, setStartingTaskId] = useState<number | null>(null)
+  const [abandoningTaskId, setAbandoningTaskId] = useState<number | null>(null)
   const [workoutSubmitting, setWorkoutSubmitting] = useState(false)
 
+  // Session completion modal
+  const [completedTask, setCompletedTask] = useState<TaskResponse | null>(null)
+
+  // ─── Data fetching ───────────────────────────────────────────────────────────
+
   const fetchDashboard = async () => {
-    if (!user) return
-
-    if (!user.userId) {
-      console.error("[Dashboard] User object missing 'id'", user)
-      setError("User data is incomplete (missing ID). Please check the console logs.")
-      setLoading(false)
-      return
-    }
-
+    if (!user?.userId) return
     try {
       setLoading(true)
       const data = await apiClient.getDashboard()
@@ -93,18 +102,14 @@ export default function DashboardPage() {
       setError("")
     } catch (err) {
       const apiError = err as ApiError
-      console.error("[Dashboard] Fetch error:", apiError)
-
       if (apiError.status === 403 && apiError.error === "PROFILE_NOT_COMPLETED") {
         router.push("/complete-profile")
         return
       }
-
       if (apiError.status === 401) {
         router.push("/login")
         return
       }
-
       setError("Failed to load dashboard data")
     } finally {
       setLoading(false)
@@ -115,22 +120,20 @@ export default function DashboardPage() {
     fetchDashboard()
   }, [user, router])
 
+  // ─── Handlers ────────────────────────────────────────────────────────────────
+
   const handleStartTask = async (taskId: number) => {
     if (!user?.userId) return
-
     try {
       setStartingTaskId(taskId)
       await apiClient.startTask(taskId)
-      toast({
-        title: "Focus session started",
-        description: "Stay focused. The clock is ticking.",
-      })
+      toast({ title: "Focus session started", description: "Stay focused. The clock is ticking." })
       await fetchDashboard()
     } catch (err) {
-      console.error("[Dashboard] Failed to start task:", err)
+      const apiError = err as ApiError
       toast({
         title: "Could not start session",
-        description: "Please try again.",
+        description: apiError?.message || "Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -140,25 +143,17 @@ export default function DashboardPage() {
 
   const handleCompleteTask = async (taskId: number) => {
     if (!user?.userId) return
-
     try {
       setCompletingTaskId(taskId)
       const task = await apiClient.completeTask(taskId)
-      
-      const feedback = task.actualMinutes && task.actualMinutes > task.durationMinutes
-        ? `Completed in ${task.actualMinutes}m (estimated ${task.durationMinutes}m).`
-        : `Nice work. You finished in ${task.actualMinutes || task.durationMinutes}m.`
-
-      toast({
-        title: "Task completed",
-        description: feedback,
-      })
+      // Show the session-complete modal
+      setCompletedTask(task)
       await fetchDashboard()
     } catch (err) {
-      console.error("[Dashboard] Failed to complete task:", err)
+      const apiError = err as ApiError
       toast({
         title: "Could not complete task",
-        description: "Please try again.",
+        description: apiError?.message || "Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -166,9 +161,27 @@ export default function DashboardPage() {
     }
   }
 
+  const handleAbandonTask = async (taskId: number) => {
+    if (!user?.userId) return
+    try {
+      setAbandoningTaskId(taskId)
+      await apiClient.abandonTask(taskId)
+      toast({ title: "Session abandoned", description: "Task returned to planned." })
+      await fetchDashboard()
+    } catch (err) {
+      const apiError = err as ApiError
+      toast({
+        title: "Could not abandon session",
+        description: apiError?.message || "Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setAbandoningTaskId(null)
+    }
+  }
+
   const handleWorkoutToggle = async (didWorkout: boolean) => {
     if (!user?.userId) return
-
     try {
       setWorkoutSubmitting(true)
       await apiClient.markWorkout(didWorkout)
@@ -179,17 +192,14 @@ export default function DashboardPage() {
           : "Today's workout status has been undone.",
       })
       await fetchDashboard()
-    } catch (err) {
-      console.error("[Dashboard] Failed to update workout:", err)
-      toast({
-        title: "Could not update workout",
-        description: "Please try again.",
-        variant: "destructive",
-      })
+    } catch {
+      toast({ title: "Could not update workout", description: "Please try again.", variant: "destructive" })
     } finally {
       setWorkoutSubmitting(false)
     }
   }
+
+  // ─── Loading / Error states ───────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -213,26 +223,59 @@ export default function DashboardPage() {
     )
   }
 
-  const { fitnessSummary, taskSummary } = dashboard
-  const activeTasks = [...taskSummary.activeTasks].sort(
-    (left, right) => TASK_TYPE_ORDER.indexOf(left.taskType) - TASK_TYPE_ORDER.indexOf(right.taskType),
-  )
-  const completedToday = taskSummary.completedTasks.filter((task) => isToday(task.completedAt))
-  const completedTodayCount = completedToday.length
-  const totalTaskCount = activeTasks.length + completedTodayCount
-  const completedTodayMinutes = completedToday.reduce((sum, task) => sum + task.durationMinutes, 0)
-  const plannedMinutes = activeTasks.reduce((sum, task) => sum + task.durationMinutes, 0)
-  const progressPercent = totalTaskCount === 0 ? 100 : Math.round((completedTodayCount / totalTaskCount) * 100)
+  // ─── Derived state ────────────────────────────────────────────────────────────
 
-  const groupedTasks = TASK_TYPE_ORDER.map((taskType) => ({
+  const { fitnessSummary, taskSummary } = dashboard
+
+  const allActiveTasks = [...taskSummary.activeTasks]
+
+  // Separate IN_PROGRESS from PLANNED for prioritised display
+  const inProgressTask = allActiveTasks.find((t) => t.status === "IN_PROGRESS") ?? null
+  const hasActiveSession = inProgressTask !== null
+
+  const plannedTasks = allActiveTasks
+    .filter((t) => t.status === "PLANNED")
+    .sort((a, b) => TASK_TYPE_ORDER.indexOf(a.taskType) - TASK_TYPE_ORDER.indexOf(b.taskType))
+
+  const completedToday = taskSummary.completedTasks.filter((t) => isToday(t.completedAt))
+  const completedTodayCount = completedToday.length
+  const totalTaskCount = allActiveTasks.length + completedTodayCount
+  const plannedMinutes = allActiveTasks.reduce((s, t) => s + t.durationMinutes, 0)
+  const progressPercent =
+    totalTaskCount === 0 ? 100 : Math.round((completedTodayCount / totalTaskCount) * 100)
+
+  const groupedPlanned = TASK_TYPE_ORDER.map((taskType) => ({
     taskType,
-    tasks: activeTasks.filter((task) => task.taskType === taskType),
-  })).filter((group) => group.tasks.length > 0)
+    tasks: plannedTasks.filter((t) => t.taskType === taskType),
+  })).filter((g) => g.tasks.length > 0)
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <AuthGuard>
       <DashboardLayout>
+        {/* ── Focus Mode overlay (portal) ─────────────────────────────── */}
+        {inProgressTask && (
+          <FocusMode
+            task={inProgressTask}
+            onComplete={() => handleCompleteTask(inProgressTask.id)}
+            onAbandon={() => handleAbandonTask(inProgressTask.id)}
+            completing={completingTaskId === inProgressTask.id}
+            abandoning={abandoningTaskId === inProgressTask.id}
+          />
+        )}
+
+        {/* ── Session completion modal (portal) ───────────────────────── */}
+        {completedTask && (
+          <SessionComplete
+            task={completedTask}
+            onDismiss={() => setCompletedTask(null)}
+          />
+        )}
+
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+
+          {/* ── Hero / Progress strip ─────────────────────────────────── */}
           <div className="command-surface reveal-up mb-8 overflow-hidden rounded-lg p-5 sm:p-7">
             <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
               <div>
@@ -250,10 +293,13 @@ export default function DashboardPage() {
                   <span className="text-sm font-semibold text-primary">{progressPercent}%</span>
                 </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-primary transition-all duration-700" style={{ width: `${progressPercent}%` }} />
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-700"
+                    style={{ width: `${progressPercent}%` }}
+                  />
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-                  <span>{activeTasks.length} open</span>
+                  <span>{allActiveTasks.length} open</span>
                   <span>{completedTodayCount} done</span>
                   <span>{formatMinutes(plannedMinutes)} left</span>
                 </div>
@@ -261,6 +307,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          {/* ── Stat cards ───────────────────────────────────────────────── */}
           <div className="reveal-up reveal-delay-1 mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Card className="border-l-4 border-l-primary bg-card/80">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -269,9 +316,7 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">{dashboard.momentumScore}</div>
-                <p className="mt-1 text-xs font-medium text-muted-foreground">
-                  Your composite discipline signal
-                </p>
+                <p className="mt-1 text-xs font-medium text-muted-foreground">Your composite discipline signal</p>
               </CardContent>
             </Card>
 
@@ -294,41 +339,82 @@ export default function DashboardPage() {
                 <CheckCircle2 className="h-5 w-5 text-emerald-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold">
-                  {completedTodayCount} of {totalTaskCount}
-                </div>
+                <div className="text-3xl font-bold">{completedTodayCount} of {totalTaskCount}</div>
                 <p className="mt-1 text-xs font-medium text-muted-foreground">tasks completed today</p>
               </CardContent>
             </Card>
           </div>
 
+          {/* ── Main grid ────────────────────────────────────────────────── */}
           <div className="reveal-up reveal-delay-2 grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] lg:items-start">
+
+            {/* Today's task sequence */}
             <Card className="order-2 overflow-hidden bg-card/90 lg:order-1">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-primary" />
                   Today's Sequence
                 </CardTitle>
-                <CardDescription>Move left to right through the commitments that still need attention.</CardDescription>
+                <CardDescription>
+                  Move left to right through the commitments that still need attention.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
-                {groupedTasks.length === 0 ? (
+
+                {/* ── IN_PROGRESS task — shown prominently at top ── */}
+                {inProgressTask && (() => {
+                  const meta = TASK_TYPE_META[inProgressTask.taskType]
+                  const InProgressIcon = meta.icon
+                  return (
+                    <section className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Badge className={meta.badgeClassName}>
+                          <InProgressIcon className="mr-1 h-3.5 w-3.5" />
+                          {meta.label}
+                        </Badge>
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 dark:text-indigo-400">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
+                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                          </span>
+                          In Progress
+                        </span>
+                      </div>
+                      <div className={`rounded-lg border-2 border-indigo-400/40 p-4 shadow-md ${meta.railClassName}`}>
+                        <p className="mb-3 font-semibold leading-tight">{inProgressTask.title}</p>
+                        <TaskTimer
+                          startedAt={inProgressTask.startedAt}
+                          durationMinutes={inProgressTask.durationMinutes}
+                        />
+                        <p className="mt-3 text-center text-xs text-muted-foreground/60">
+                          Focus Mode is holding this session. Complete or abandon from the focus card.
+                        </p>
+                      </div>
+                    </section>
+                  )
+                })()}
+
+                {/* ── PLANNED task groups ── */}
+                {groupedPlanned.length === 0 && !inProgressTask ? (
                   <div className="rounded-lg border border-dashed bg-muted/20 p-8 text-center">
                     <p className="text-lg font-semibold">No active tasks right now</p>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      You're caught up for the moment. Head to Tasks if you want to plan the rest of the day.
+                      You're caught up. Head to Tasks to plan more.
                     </p>
                     <Button variant="outline" className="mt-4 gap-2" onClick={() => router.push("/tasks")}>
                       Open Tasks <ArrowRight className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
-                  groupedTasks.map((group, groupIndex) => {
+                  groupedPlanned.map((group, groupIndex) => {
                     const meta = TASK_TYPE_META[group.taskType]
                     const GroupIcon = meta.icon
-
                     return (
-                      <section key={group.taskType} className="space-y-3" style={{ animationDelay: `${groupIndex * 90}ms` }}>
+                      <section
+                        key={group.taskType}
+                        className={`space-y-3 transition-opacity duration-300 ${hasActiveSession ? "opacity-50" : ""}`}
+                        style={{ animationDelay: `${groupIndex * 90}ms` }}
+                      >
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2">
                             <Badge className={meta.badgeClassName}>
@@ -345,7 +431,7 @@ export default function DashboardPage() {
                           {group.tasks.map((task, taskIndex) => (
                             <div
                               key={task.id}
-                              className={`min-w-[240px] rounded-lg border p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md sm:min-w-[280px] ${meta.railClassName}`}
+                              className={`min-w-[240px] rounded-lg border p-4 shadow-sm transition-all duration-300 sm:min-w-[280px] ${meta.railClassName} ${hasActiveSession ? "cursor-not-allowed" : "hover:-translate-y-1 hover:shadow-md"}`}
                             >
                               <div className="mb-4 flex items-center justify-between">
                                 <span className={`h-2 w-8 rounded-full ${meta.markerClassName}`} />
@@ -355,36 +441,35 @@ export default function DashboardPage() {
                               </div>
                               <div className="min-w-0 space-y-3">
                                 <p className="line-clamp-2 min-h-10 font-semibold leading-tight">{task.title}</p>
-                                {task.status === "IN_PROGRESS" ? (
-                                  <TaskTimer startedAt={task.startedAt} durationMinutes={task.durationMinutes} />
-                                ) : (
-                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Clock className="h-4 w-4" />
-                                    <span>{task.durationMinutes} minutes</span>
-                                  </div>
-                                )}
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Clock className="h-4 w-4" />
+                                  <span>{task.durationMinutes} minutes</span>
+                                </div>
                               </div>
-
-                              {task.status === "IN_PROGRESS" ? (
-                                <Button
-                                  className="mt-4 w-full gap-2 bg-indigo-600 hover:bg-indigo-700"
-                                  onClick={() => handleCompleteTask(task.id)}
-                                  disabled={completingTaskId === task.id}
-                                >
-                                  <Check className="h-4 w-4" />
-                                  {completingTaskId === task.id ? "Completing..." : "Complete Task"}
-                                </Button>
-                              ) : (
-                                <Button
-                                  className="mt-4 w-full gap-2"
-                                  variant="secondary"
-                                  onClick={() => handleStartTask(task.id)}
-                                  disabled={startingTaskId === task.id}
-                                >
-                                  <Play className="h-4 w-4" />
-                                  {startingTaskId === task.id ? "Starting..." : "Start Focus"}
-                                </Button>
-                              )}
+                              <Button
+                                className="mt-4 w-full gap-2"
+                                variant="secondary"
+                                id={`dashboard-start-task-${task.id}`}
+                                onClick={() => handleStartTask(task.id)}
+                                disabled={hasActiveSession || startingTaskId === task.id}
+                              >
+                                {startingTaskId === task.id ? (
+                                  <>
+                                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                    Starting…
+                                  </>
+                                ) : hasActiveSession ? (
+                                  <>
+                                    <Check className="h-4 w-4" />
+                                    Session Active
+                                  </>
+                                ) : (
+                                  <>
+                                    <Play className="h-4 w-4" />
+                                    Start Focus
+                                  </>
+                                )}
+                              </Button>
                             </div>
                           ))}
                         </div>
@@ -395,7 +480,10 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
+            {/* Sidebar */}
             <div className="order-1 space-y-6 lg:order-2">
+
+              {/* Workout card */}
               <Card className={`border-2 ${fitnessSummary.didWorkoutToday ? "border-green-500/20 bg-green-500/5" : "border-muted"}`}>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-5">
@@ -424,7 +512,7 @@ export default function DashboardPage() {
                               onClick={() => handleWorkoutToggle(false)}
                               disabled={workoutSubmitting}
                             >
-                              {workoutSubmitting ? "Updating..." : "Undo"}
+                              {workoutSubmitting ? "Updating…" : "Undo"}
                             </Button>
                           </div>
                         ) : (
@@ -434,7 +522,7 @@ export default function DashboardPage() {
                             disabled={workoutSubmitting}
                           >
                             <Activity className="h-4 w-4" />
-                            {workoutSubmitting ? "Logging..." : "Log Workout"}
+                            {workoutSubmitting ? "Logging…" : "Log Workout"}
                           </Button>
                         )}
                       </div>
@@ -443,6 +531,7 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
+              {/* Today at a Glance */}
               <Card>
                 <CardHeader>
                   <CardTitle>Today at a Glance</CardTitle>
@@ -451,18 +540,22 @@ export default function DashboardPage() {
                 <CardContent className="space-y-4">
                   <div className="rounded-lg border bg-muted/20 p-4">
                     <div className="text-sm font-medium text-muted-foreground">Tasks still open</div>
-                    <div className="mt-1 text-2xl font-bold">{activeTasks.length}</div>
+                    <div className="mt-1 text-2xl font-bold">{allActiveTasks.length}</div>
                   </div>
                   <div className="rounded-lg border bg-muted/20 p-4">
                     <div className="text-sm font-medium text-muted-foreground">Time still planned</div>
                     <div className="mt-1 text-2xl font-bold">
-                      {formatMinutes(activeTasks.reduce((sum, task) => sum + task.durationMinutes, 0))}
+                      {formatMinutes(allActiveTasks.reduce((s, t) => s + t.durationMinutes, 0))}
                     </div>
                   </div>
                   <div className="rounded-lg border bg-muted/20 p-4">
                     <div className="text-sm font-medium text-muted-foreground">Next best focus</div>
                     <div className="mt-1 text-base font-semibold">
-                      {groupedTasks[0] ? TASK_TYPE_META[groupedTasks[0].taskType].label : "Nothing queued"}
+                      {inProgressTask
+                        ? `${TASK_TYPE_META[inProgressTask.taskType].label} in session`
+                        : groupedPlanned[0]
+                          ? TASK_TYPE_META[groupedPlanned[0].taskType].label
+                          : "Nothing queued"}
                     </div>
                   </div>
                 </CardContent>

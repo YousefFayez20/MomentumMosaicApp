@@ -78,6 +78,16 @@ public class TaskController {
         Task task = taskService.completeTask(userId,taskId);
         return dtoMapper.taskToTaskResponse(task);
     }
+    @PutMapping("/{taskId}/abandon")
+    public TaskResponse abandonTask(Authentication authentication,
+                                     @PathVariable Long taskId){
+        if(authentication == null || !(authentication.getPrincipal() instanceof AppUserPrincipal)){
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        }
+        Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
+        Task task = taskService.abandonTask(userId,taskId);
+        return dtoMapper.taskToTaskResponse(task);
+    }
 
     @GetMapping("/active")
     public List<TaskResponse> getActiveTasks(Authentication authentication){

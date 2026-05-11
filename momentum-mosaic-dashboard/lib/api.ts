@@ -177,6 +177,12 @@ export class ApiClient {
     })
   }
 
+  async abandonTask(taskId: number) {
+    return this.request<TaskResponse>(`/api/tasks/${taskId}/abandon`, {
+      method: "PUT",
+    })
+  }
+
   async deleteTask(taskId: number) {
     return this.request(`/api/tasks/${taskId}`, {
       method: "DELETE",
