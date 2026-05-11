@@ -8,19 +8,34 @@ import { AuthGuard } from "@/components/auth-guard"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Plus, Check, Trash2, Clock, Edit2, Brain, Zap, Dumbbell, ListTodo, History, Layers, CheckCircle2 } from "lucide-react"
+import {
+  Plus, Check, Trash2, Clock, Edit2, Brain, Zap, Dumbbell,
+  ListTodo, History, Layers, CheckCircle2, Play,
+} from "lucide-react"
 import { CreateTaskDialog } from "@/components/create-task-dialog"
 import { EditTaskDialog } from "@/components/edit-task-dialog"
 import { useToast } from "@/hooks/use-toast"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRouter } from "next/navigation"
 import { BrandedLoader } from "@/components/branded-loader"
+import { TaskTimer } from "@/components/task-timer"
+import { FocusMode } from "@/components/focus-mode"
+import { SessionComplete } from "@/components/session-complete"
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const TASK_TYPE_ORDER: Array<TaskResponse["taskType"]> = ["DEEP", "SHALLOW", "FITNESS"]
 
 const TASK_TYPE_META: Record<
   TaskResponse["taskType"],
-  { label: string; icon: typeof Brain; railClassName: string; markerClassName: string; textClassName: string }
+  {
+    label: string
+    icon: typeof Brain
+    railClassName: string
+    markerClassName: string
+    textClassName: string
+    borderActive: string
+  }
 > = {
   DEEP: {
     label: "Deep Work",
@@ -28,6 +43,7 @@ const TASK_TYPE_META: Record<
     railClassName: "border-indigo-200 bg-indigo-50/70 dark:border-indigo-900/60 dark:bg-indigo-950/20",
     markerClassName: "bg-indigo-500",
     textClassName: "text-indigo-700 dark:text-indigo-300",
+    borderActive: "border-indigo-400/60",
   },
   SHALLOW: {
     label: "Shallow Work",
@@ -35,6 +51,7 @@ const TASK_TYPE_META: Record<
     railClassName: "border-sky-200 bg-sky-50/70 dark:border-sky-900/60 dark:bg-sky-950/20",
     markerClassName: "bg-sky-500",
     textClassName: "text-sky-700 dark:text-sky-300",
+    borderActive: "border-sky-400/60",
   },
   FITNESS: {
     label: "Fitness",
@@ -42,125 +59,183 @@ const TASK_TYPE_META: Record<
     railClassName: "border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/20",
     markerClassName: "bg-emerald-500",
     textClassName: "text-emerald-700 dark:text-emerald-300",
+    borderActive: "border-emerald-400/60",
   },
 }
 
 function formatMinutes(totalMinutes: number) {
   const hours = Math.floor(totalMinutes / 60)
   const minutes = totalMinutes % 60
-
   if (hours === 0) return `${minutes}m`
   if (minutes === 0) return `${hours}h`
   return `${hours}h ${minutes}m`
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function TasksPage() {
   const { user } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
+
   const [tasks, setTasks] = useState<TaskResponse[]>([])
   const [loading, setLoading] = useState(true)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<TaskResponse | null>(null)
 
-  const fetchTasks = async () => {
-    if (!user) return
-    if (!user.userId) {
-      setLoading(false)
-      return
-    }
+  // Action loading states
+  const [startingTaskId, setStartingTaskId] = useState<number | null>(null)
+  const [completingTaskId, setCompletingTaskId] = useState<number | null>(null)
+  const [abandoningTaskId, setAbandoningTaskId] = useState<number | null>(null)
 
+  // Session completion modal
+  const [completedTask, setCompletedTask] = useState<TaskResponse | null>(null)
+
+  // ─── Data fetching ────────────────────────────────────────────────────────────
+
+  const fetchTasks = async () => {
+    if (!user?.userId) { setLoading(false); return }
     try {
       setLoading(true)
       const data = await apiClient.getTasks()
       setTasks(data)
     } catch (err) {
       const apiError = err as ApiError
-      console.error("[Tasks] Fetch error:", apiError)
-
       if (apiError.status === 403 && apiError.error === "PROFILE_NOT_COMPLETED") {
-        router.push("/complete-profile")
-        return
+        router.push("/complete-profile"); return
       }
-
       if (apiError.status === 401) {
-        router.push("/login")
-        return
+        router.push("/login"); return
       }
-
-      toast({
-        title: "Could not load tasks",
-        description: "Please try again.",
-        variant: "destructive",
-      })
+      toast({ title: "Could not load tasks", description: "Please try again.", variant: "destructive" })
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    fetchTasks()
-  }, [user])
+  useEffect(() => { fetchTasks() }, [user])
+
+  // ─── Handlers ────────────────────────────────────────────────────────────────
+
+  const handleStartTask = async (taskId: number) => {
+    if (!user?.userId) return
+    try {
+      setStartingTaskId(taskId)
+      await apiClient.startTask(taskId)
+      toast({ title: "Focus session started", description: "Stay focused. The clock is ticking." })
+      await fetchTasks()
+    } catch (err) {
+      const apiError = err as ApiError
+      toast({
+        title: "Could not start session",
+        description: apiError?.message || "Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setStartingTaskId(null)
+    }
+  }
 
   const handleCompleteTask = async (taskId: number) => {
     if (!user?.userId) return
-
     try {
-      await apiClient.completeTask(taskId)
-      toast({
-        title: "Task completed",
-        description: "Nice work. One less thing on the plate.",
-      })
-      fetchTasks()
+      setCompletingTaskId(taskId)
+      const task = await apiClient.completeTask(taskId)
+      setCompletedTask(task)
+      await fetchTasks()
     } catch (err) {
+      const apiError = err as ApiError
       toast({
         title: "Could not complete task",
-        description: "Please try again.",
+        description: apiError?.message || "Please try again.",
         variant: "destructive",
       })
-      console.error(err)
+    } finally {
+      setCompletingTaskId(null)
+    }
+  }
+
+  const handleAbandonTask = async (taskId: number) => {
+    if (!user?.userId) return
+    try {
+      setAbandoningTaskId(taskId)
+      await apiClient.abandonTask(taskId)
+      toast({ title: "Session abandoned", description: "Task returned to planned." })
+      await fetchTasks()
+    } catch (err) {
+      const apiError = err as ApiError
+      toast({
+        title: "Could not abandon session",
+        description: apiError?.message || "Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setAbandoningTaskId(null)
     }
   }
 
   const handleDeleteTask = async (taskId: number) => {
     if (!user?.userId) return
-
     try {
       await apiClient.deleteTask(taskId)
-      toast({
-        title: "Task removed",
-        description: "It's been removed from your list.",
-      })
-      fetchTasks()
-    } catch (err) {
-      toast({
-        title: "Could not remove task",
-        description: "Please try again.",
-        variant: "destructive",
-      })
-      console.error(err)
+      toast({ title: "Task removed", description: "It's been removed from your list." })
+      await fetchTasks()
+    } catch {
+      toast({ title: "Could not remove task", description: "Please try again.", variant: "destructive" })
     }
   }
 
+  // ─── Derived state ────────────────────────────────────────────────────────────
+
   const activeTasks = tasks.filter((t) => !t.completed)
   const completedTasks = tasks.filter((t) => t.completed)
-  const totalActiveMinutes = activeTasks.reduce((sum, t) => sum + t.durationMinutes, 0)
-  const groupedActiveTasks = TASK_TYPE_ORDER.map((taskType) => ({
+  const totalActiveMinutes = activeTasks.reduce((s, t) => s + t.durationMinutes, 0)
+
+  // Single-active enforcement
+  const inProgressTask = activeTasks.find((t) => t.status === "IN_PROGRESS") ?? null
+  const hasActiveSession = inProgressTask !== null
+
+  const plannedTasks = activeTasks.filter((t) => t.status === "PLANNED")
+  const groupedPlanned = TASK_TYPE_ORDER.map((taskType) => ({
     taskType,
-    tasks: activeTasks.filter((task) => task.taskType === taskType),
-  })).filter((group) => group.tasks.length > 0)
+    tasks: plannedTasks.filter((t) => t.taskType === taskType),
+  })).filter((g) => g.tasks.length > 0)
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <AuthGuard>
       <DashboardLayout>
+
+        {/* ── Focus Mode overlay (portal) ───────────────────────────────── */}
+        {inProgressTask && (
+          <FocusMode
+            task={inProgressTask}
+            onComplete={() => handleCompleteTask(inProgressTask.id)}
+            onAbandon={() => handleAbandonTask(inProgressTask.id)}
+            completing={completingTaskId === inProgressTask.id}
+            abandoning={abandoningTaskId === inProgressTask.id}
+          />
+        )}
+
+        {/* ── Session completion modal (portal) ─────────────────────────── */}
+        {completedTask && (
+          <SessionComplete
+            task={completedTask}
+            onDismiss={() => setCompletedTask(null)}
+          />
+        )}
+
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
+
+          {/* ── Page header ───────────────────────────────────────────────── */}
           <div className="reveal-up mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Commitment board</p>
               <h2 className="text-3xl font-bold">Tasks</h2>
               <p className="text-muted-foreground">Your active commitments and completed work</p>
             </div>
-            <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
+            <Button onClick={() => setCreateDialogOpen(true)} className="gap-2" id="create-task-btn">
               <Plus className="h-4 w-4" />
               New Task
             </Button>
@@ -170,6 +245,7 @@ export default function TasksPage() {
             <BrandedLoader className="h-64" label="Loading tasks" />
           ) : (
             <>
+              {/* ── Stat row ────────────────────────────────────────────── */}
               <div className="reveal-up reveal-delay-1 mb-8 grid gap-4 sm:grid-cols-2 lg:max-w-3xl">
                 <Card className="border-l-4 border-l-primary bg-card/80 shadow-sm transition-all hover:shadow-md">
                   <CardContent className="flex items-center justify-between p-6">
@@ -196,6 +272,7 @@ export default function TasksPage() {
                 </Card>
               </div>
 
+              {/* ── Tabs ─────────────────────────────────────────────────── */}
               <Tabs defaultValue="active" className="reveal-up reveal-delay-2 w-full">
                 <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <TabsList className="grid w-full max-w-md grid-cols-2 rounded-full p-1">
@@ -213,6 +290,7 @@ export default function TasksPage() {
                   </p>
                 </div>
 
+                {/* ── Active tab ─────────────────────────────────────────── */}
                 <TabsContent value="active" className="mt-0">
                   {activeTasks.length === 0 ? (
                     <Card className="border-dashed">
@@ -222,7 +300,7 @@ export default function TasksPage() {
                         </div>
                         <h3 className="mb-2 text-lg font-semibold">No active tasks</h3>
                         <p className="mb-4 max-w-sm text-sm text-muted-foreground">
-                          You're all caught up for now. Add a task when you're ready to plan the next block.
+                          You're all caught up. Add a task when you're ready to plan the next block.
                         </p>
                         <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 rounded-full">
                           <Plus className="h-4 w-4" />
@@ -232,12 +310,62 @@ export default function TasksPage() {
                     </Card>
                   ) : (
                     <div className="space-y-7">
-                      {groupedActiveTasks.map((group) => {
+
+                      {/* ── IN_PROGRESS task — always first ──────────────── */}
+                      {inProgressTask && (() => {
+                        const meta = TASK_TYPE_META[inProgressTask.taskType]
+                        const TypeIcon = meta.icon
+                        return (
+                          <section className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <div className={`flex items-center gap-2 text-sm font-semibold ${meta.textClassName}`}>
+                                <TypeIcon className="h-4 w-4" />
+                                {meta.label}
+                              </div>
+                              <span className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 dark:text-indigo-400">
+                                <span className="relative flex h-1.5 w-1.5">
+                                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
+                                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                                </span>
+                                In Progress
+                              </span>
+                            </div>
+
+                            <div
+                              className={`group rounded-lg border-2 p-4 shadow-md ${meta.railClassName} ${meta.borderActive}`}
+                            >
+                              <div className="mb-3 flex items-start justify-between">
+                                <span className={`mt-1 h-2 w-8 rounded-full ${meta.markerClassName}`} />
+                                {/* No edit/delete during active session */}
+                              </div>
+                              <div className="space-y-3">
+                                <p className="font-mono text-xs text-muted-foreground">01</p>
+                                <h3 className="line-clamp-2 text-lg font-semibold leading-tight">
+                                  {inProgressTask.title}
+                                </h3>
+                                <TaskTimer
+                                  startedAt={inProgressTask.startedAt}
+                                  durationMinutes={inProgressTask.durationMinutes}
+                                />
+                                <p className="text-center text-xs text-muted-foreground/60">
+                                  Focus Mode is holding this session. Complete or abandon from the focus card.
+                                </p>
+                              </div>
+                            </div>
+                          </section>
+                        )
+                      })()}
+
+                      {/* ── PLANNED tasks, grouped by type ────────────────── */}
+                      {groupedPlanned.map((group) => {
                         const meta = TASK_TYPE_META[group.taskType]
                         const GroupIcon = meta.icon
 
                         return (
-                          <section key={group.taskType} className="space-y-3">
+                          <section
+                            key={group.taskType}
+                            className={`space-y-3 transition-opacity duration-300 ${hasActiveSession ? "opacity-45" : ""}`}
+                          >
                             <div className="flex items-center justify-between gap-3">
                               <div className={`flex items-center gap-2 text-sm font-semibold ${meta.textClassName}`}>
                                 <GroupIcon className="h-4 w-4" />
@@ -252,47 +380,72 @@ export default function TasksPage() {
                               {group.tasks.map((task, taskIndex) => (
                                 <div
                                   key={task.id}
-                                  className={`group min-w-[250px] rounded-lg border p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md sm:min-w-[300px] ${meta.railClassName}`}
+                                  className={`group min-w-[250px] rounded-lg border p-4 shadow-sm transition-all duration-300 sm:min-w-[300px] ${meta.railClassName} ${hasActiveSession ? "cursor-not-allowed" : "hover:-translate-y-1 hover:shadow-md"}`}
                                 >
                                   <div className="mb-4 flex items-center justify-between">
                                     <span className={`h-2 w-8 rounded-full ${meta.markerClassName}`} />
-                                    <div className="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={() => setEditingTask(task)}
-                                        className="h-8 w-8 hover:bg-background/60"
-                                      >
-                                        <Edit2 className="h-3.5 w-3.5" />
-                                      </Button>
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        onClick={() => handleDeleteTask(task.id)}
-                                        className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </div>
+                                    {/* Edit / delete only when no session active */}
+                                    {!hasActiveSession && (
+                                      <div className="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          id={`edit-task-${task.id}`}
+                                          onClick={() => setEditingTask(task)}
+                                          className="h-8 w-8 hover:bg-background/60"
+                                        >
+                                          <Edit2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          id={`delete-task-${task.id}`}
+                                          onClick={() => handleDeleteTask(task.id)}
+                                          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </div>
+                                    )}
                                   </div>
+
                                   <div className="space-y-3">
                                     <div>
                                       <p className="mb-1 font-mono text-xs text-muted-foreground">
                                         {String(taskIndex + 1).padStart(2, "0")}
                                       </p>
-                                      <h3 className="line-clamp-2 min-h-12 text-lg font-semibold leading-tight">{task.title}</h3>
+                                      <h3 className="line-clamp-2 min-h-12 text-lg font-semibold leading-tight">
+                                        {task.title}
+                                      </h3>
                                     </div>
                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                       <Clock className="h-4 w-4" />
                                       <span>{task.durationMinutes} minutes</span>
                                     </div>
+
                                     <Button
-                                      onClick={() => handleCompleteTask(task.id)}
+                                      id={`start-task-${task.id}`}
+                                      onClick={() => handleStartTask(task.id)}
                                       className="w-full gap-2"
                                       variant="secondary"
+                                      disabled={hasActiveSession || startingTaskId === task.id}
                                     >
-                                      <Check className="h-4 w-4" />
-                                      Mark Complete
+                                      {startingTaskId === task.id ? (
+                                        <>
+                                          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                          Starting…
+                                        </>
+                                      ) : hasActiveSession ? (
+                                        <>
+                                          <Check className="h-4 w-4" />
+                                          Session Active
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Play className="h-4 w-4" />
+                                          Start Focus
+                                        </>
+                                      )}
                                     </Button>
                                   </div>
                                 </div>
@@ -305,12 +458,15 @@ export default function TasksPage() {
                   )}
                 </TabsContent>
 
+                {/* ── Completed tab ──────────────────────────────────────── */}
                 <TabsContent value="completed" className="mt-0">
                   {completedTasks.length === 0 ? (
                     <Card className="border-dashed">
                       <CardContent className="flex h-64 flex-col items-center justify-center text-center">
                         <History className="mb-4 h-12 w-12 text-muted-foreground/50" />
-                        <p className="text-muted-foreground">No completed tasks yet. Finished work will appear here.</p>
+                        <p className="text-muted-foreground">
+                          No completed tasks yet. Finished work will appear here.
+                        </p>
                       </CardContent>
                     </Card>
                   ) : (
@@ -338,16 +494,28 @@ export default function TasksPage() {
                               {task.title}
                             </CardTitle>
                           </CardHeader>
-                          <CardContent>
+                          <CardContent className="space-y-2">
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <CheckCircle2 className="h-4 w-4 text-green-500" />
                               Completed
                               {task.completedAt && ` ${new Date(task.completedAt).toLocaleDateString()}`}
                             </div>
-                            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground/70">
-                              <Clock className="h-3 w-3" />
-                              {task.durationMinutes} min
-                            </div>
+                            {/* Actual vs estimated time */}
+                            {task.actualMinutes != null ? (
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground/70">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  Actual: {task.actualMinutes}m
+                                </div>
+                                <span className="text-muted-foreground/40">vs</span>
+                                <div>Est: {task.durationMinutes}m</div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-xs text-muted-foreground/70">
+                                <Clock className="h-3 w-3" />
+                                {task.durationMinutes} min
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       ))}

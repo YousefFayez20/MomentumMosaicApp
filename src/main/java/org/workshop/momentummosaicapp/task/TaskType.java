@@ -4,5 +4,4 @@ public enum TaskType {
     DEEP,
     SHALLOW,
     FITNESS,
-    OTHER
 }

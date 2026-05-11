@@ -15,6 +15,7 @@ import org.workshop.momentummosaicapp.fitness.FitnessService;
 import org.workshop.momentummosaicapp.task.Task;
 import org.workshop.momentummosaicapp.task.TaskRepository;
 import org.workshop.momentummosaicapp.task.TaskService;
+import org.workshop.momentummosaicapp.task.TaskStatus;
 import org.workshop.momentummosaicapp.task.TaskType;
 import org.workshop.momentummosaicapp.user.AppUser;
 import org.workshop.momentummosaicapp.user.AppUserRepository;
@@ -74,9 +75,9 @@ class DashboardServiceImplTest {
         activeTask.setTitle("Reading");
         activeTask.setTaskType(TaskType.FITNESS);
         activeTask.setDurationMinutes(45);
-        activeTask.setCompleted(false);
+        activeTask.setStatus(TaskStatus.PLANNED);
 
-        when(taskRepository.findByAppUserIdAndCompletedFalse(userId)).thenReturn(new ArrayList<>(List.of(activeTask)));
+        when(taskRepository.findByAppUserIdAndStatusNot(userId, TaskStatus.COMPLETED)).thenReturn(new ArrayList<>(List.of(activeTask)));
         when(taskRepository.findByAppUserIdAndCompletedTrue(userId)).thenReturn(new ArrayList<>(List.of(shallowCompleted,deepCompleted)));
         when(fitnessService.getTodayLog(userId)).thenReturn(Optional.of(new DailyFitnessLog()));
         when(fitnessService.getTotalWorkoutDays(userId)).thenReturn(10);
@@ -102,7 +103,8 @@ class DashboardServiceImplTest {
         assertEquals(10, fitnessSummary.getTotalWorkoutDays());
         assertEquals(3, fitnessSummary.getWorkoutStreak());
 
-
+        // Momentum Score
+        assertEquals(53, response.getMomentumScore());
     }
     @Test
     void shouldThrowIfUserNotFound() {

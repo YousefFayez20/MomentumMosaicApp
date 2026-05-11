@@ -8,6 +8,7 @@ import org.workshop.momentummosaicapp.fitness.DailyFitnessLogRepository;
 import org.workshop.momentummosaicapp.fitness.FitnessService;
 import org.workshop.momentummosaicapp.task.Task;
 import org.workshop.momentummosaicapp.task.TaskRepository;
+import org.workshop.momentummosaicapp.task.TaskStatus;
 import org.workshop.momentummosaicapp.task.TaskType;
 import org.workshop.momentummosaicapp.user.AppUser;
 import org.workshop.momentummosaicapp.user.AppUserRepository;
@@ -30,7 +31,7 @@ public class DashboardServiceImpl implements DashboardService{
     public DashboardResponse getDashboard(Long userId) {
         AppUser appUser = getUserOrThrow(userId);
         UserSummary userSummary = fitnessService.getUserSummary(userId);
-        List<Task> active = taskRepository.findByAppUserIdAndCompletedFalse(userId);
+        List<Task> active = taskRepository.findByAppUserIdAndStatusNot(userId, TaskStatus.COMPLETED);
         List<Task> completed = taskRepository.findByAppUserIdAndCompletedTrue(userId);
         List<TaskItem> activeItems= active.stream().map(task -> toTaskItem(task)
         ).toList();
@@ -48,8 +49,33 @@ public class DashboardServiceImpl implements DashboardService{
         int streak = fitnessService.getWorkoutStreak(userId);
         FitnessSummary fitnessSummary = FitnessSummary.builder().didWorkoutToday(didWorkoutToday).totalWorkoutDays(totalWorkoutDays).workoutStreak(streak).build();
 
-        return
-                DashboardResponse.builder().taskSummary(taskSummary).fitnessSummary(fitnessSummary).userSummary(userSummary).build();
+        int score = calculateMomentumScore(activeItems, completedItems, didWorkoutToday);
+
+        return DashboardResponse.builder()
+                .taskSummary(taskSummary)
+                .fitnessSummary(fitnessSummary)
+                .userSummary(userSummary)
+                .momentumScore(score)
+                .build();
+    }
+
+    private int calculateMomentumScore(List<TaskItem> active, List<TaskItem> completed, boolean didWorkout) {
+        // Component 1: Task completion (50%)
+        int totalTodayTasks = active.size() + completed.size();
+        double taskScore = totalTodayTasks == 0 ? 1.0 : (double) completed.size() / totalTodayTasks;
+
+        // Component 2: Workout (25%)
+        double workoutScore = didWorkout ? 1.0 : 0.0;
+
+        // Component 3: Deep work ratio (25%)
+        int totalCompletedMinutes = completed.stream().mapToInt(TaskItem::getDurationMinutes).sum();
+        int deepCompletedMinutes = completed.stream()
+                .filter(t -> t.getTaskType() == TaskType.DEEP)
+                .mapToInt(TaskItem::getDurationMinutes).sum();
+        double deepRatioScore = totalCompletedMinutes == 0 ? 0.0 : (double) deepCompletedMinutes / totalCompletedMinutes;
+
+        double total = (taskScore * 50) + (workoutScore * 25) + (deepRatioScore * 25);
+        return (int) Math.round(total);
     }
     private AppUser getUserOrThrow(Long userId){
         return appUserRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User Not Found"));
@@ -62,6 +88,9 @@ public class DashboardServiceImpl implements DashboardService{
                 .title(task.getTitle())
                 .durationMinutes(task.getDurationMinutes())
                 .completed(task.isCompleted())
+                .status(task.getStatus())
+                .startedAt(task.getStartedAt())
+                .actualMinutes(task.getActualMinutes())
                 .build();
     }
 }

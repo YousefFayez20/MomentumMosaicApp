@@ -40,11 +40,24 @@ public class Task {
     @Column(nullable = false)
     private boolean completed;
 
+    @Enumerated(EnumType.STRING)
+    private TaskStatus status =TaskStatus.PLANNED;
+
     private Instant completedAt;
+
+    private Instant startedAt;
+
+    private Integer actualMinutes;
 
     @CreationTimestamp
     private Instant createdAt;
 
     @UpdateTimestamp
     private Instant updatedAt;
+
+    @PrePersist
+    @PreUpdate
+    public void syncCompletedState(){
+        completed = (status == TaskStatus.COMPLETED);
+    }
 }

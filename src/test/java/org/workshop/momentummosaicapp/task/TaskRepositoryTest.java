@@ -40,7 +40,7 @@ class TaskRepositoryTest {
     AppUserRepository appUserRepository;
 
     @Test
-    void findByAppUserIdAndCompletedFalse() {
+    void findByAppUserIdAndStatusNot() {
         AppUser user = new AppUser();
         user.setEmail("test@example.com");
         user.setEnabled(true);
@@ -50,23 +50,21 @@ class TaskRepositoryTest {
         task.setTitle("GYM");
         task.setTaskType(TaskType.FITNESS);
         task.setDurationMinutes(60);
-        task.setCompleted(false);
+        task.setStatus(TaskStatus.PLANNED);
         taskRepository.save(task);
-
-
 
         Task completedTask = new Task();
         completedTask.setAppUser(user);
-        completedTask.setCompleted(true);
+        completedTask.setStatus(TaskStatus.COMPLETED);
         completedTask.setTitle("Cardio");
         completedTask.setTaskType(TaskType.FITNESS);
         completedTask.setDurationMinutes(60);
         taskRepository.save(completedTask);
 
-        List<Task> tasks = taskRepository.findByAppUserIdAndCompletedFalse(user.getId());
+        List<Task> tasks = taskRepository.findByAppUserIdAndStatusNot(user.getId(), TaskStatus.COMPLETED);
 
         assertEquals(1,tasks.size());
-        assertFalse(tasks.get(0).isCompleted());
+        assertNotEquals(TaskStatus.COMPLETED, tasks.get(0).getStatus());
 
 
 

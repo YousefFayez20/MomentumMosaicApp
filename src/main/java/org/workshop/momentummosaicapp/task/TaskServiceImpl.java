@@ -7,9 +7,11 @@ import org.springframework.stereotype.Service;
 import org.workshop.momentummosaicapp.user.AppUser;
 import org.workshop.momentummosaicapp.user.AppUserRepository;
 import org.workshop.momentummosaicapp.utility.exception.BadRequestException;
+import org.workshop.momentummosaicapp.utility.exception.ConflictException;
 import org.workshop.momentummosaicapp.utility.exception.ForbiddenException;
 import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
@@ -30,7 +32,7 @@ public class TaskServiceImpl implements TaskService{
         task.setTaskType(taskType);
         task.setAppUser(appUser);
         task.setDurationMinutes(durationMinutes);
-        task.setCompleted(false);
+        task.setStatus(TaskStatus.PLANNED);
         return taskRepository.save(task);
     }
 
@@ -54,20 +56,58 @@ public class TaskServiceImpl implements TaskService{
     }
 
     @Override
-    public Task completeTask(Long userId, Long taskId) {
-        AppUser appUser = getUserOrThrow(userId);
+    public Task startTask(Long userId, Long taskId) {
         Task task = getTaskOrThrow(taskId);
-        validateOwnership(userId,task);
-        if (task.isCompleted()) return task;
-        task.setCompleted(true);
-        task.setCompletedAt(Instant.now());
-        return taskRepository.save( task);
+        validateOwnership(userId, task);
+        if (task.getStatus() != TaskStatus.PLANNED) {
+            throw new BadRequestException("Task must be in PLANNED state to start");
+        }
+        if(!taskRepository.findByAppUserIdAndStatus(userId, TaskStatus.IN_PROGRESS).isEmpty()){
+           throw new ConflictException("You Can't start another task while you there's another task in progress");
+        }
+        task.setStatus(TaskStatus.IN_PROGRESS);
+        task.setStartedAt(Instant.now());
+        return taskRepository.save(task);
+    }
+
+    @Override
+    public Task completeTask(Long userId, Long taskId) {
+        Task task = getTaskOrThrow(taskId);
+        validateOwnership(userId, task);
+        if (task.getStatus() == TaskStatus.COMPLETED) return task;
+
+        Instant now = Instant.now();
+        if (task.getStatus() == TaskStatus.IN_PROGRESS && task.getStartedAt() != null) {
+            long diff = Duration.between(task.getStartedAt(), now).toMinutes();
+            task.setActualMinutes((int) diff);
+        } else {
+            // If completed directly from PLANNED, actual = estimated
+            task.setActualMinutes(task.getDurationMinutes());
+        }
+
+        task.setStatus(TaskStatus.COMPLETED);
+        task.setCompletedAt(now);
+        return taskRepository.save(task);
+    }
+
+    @Override
+    public Task abandonTask(Long userId, Long taskId) {
+        Task task = getTaskOrThrow(taskId);
+        validateOwnership(userId, task);
+        if(task.getStatus().equals(TaskStatus.IN_PROGRESS)){
+            task.setStatus(TaskStatus.PLANNED);
+        }else {
+            throw new BadRequestException("You can abandon only in progress tasks");
+        }
+        task.setStartedAt(null);
+        task.setActualMinutes(null);
+        return taskRepository.save(task);
     }
 
     @Override
     public List<Task> getActiveTasks(Long userId) {
         AppUser appUser = getUserOrThrow(userId);
-        return taskRepository.findByAppUserIdAndCompletedFalse(userId);
+        return taskRepository.findByAppUserIdAndStatusNot(userId, TaskStatus.COMPLETED);
     }
 
     @Override
