@@ -20,7 +20,7 @@ import { useRouter } from "next/navigation"
 import { BrandedLoader } from "@/components/branded-loader"
 import { TaskTimer } from "@/components/task-timer"
 import { FocusMode } from "@/components/focus-mode"
-import { SessionComplete } from "@/components/session-complete"
+import { isToday, getOrdinal } from "@/lib/utils"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -88,9 +88,6 @@ export default function TasksPage() {
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null)
   const [abandoningTaskId, setAbandoningTaskId] = useState<number | null>(null)
 
-  // Session completion modal
-  const [completedTask, setCompletedTask] = useState<TaskResponse | null>(null)
-
   // ─── Data fetching ────────────────────────────────────────────────────────────
 
   const fetchTasks = async () => {
@@ -140,8 +137,35 @@ export default function TasksPage() {
     if (!user?.userId) return
     try {
       setCompletingTaskId(taskId)
+      
+      const taskBefore = tasks.find(t => t.id === taskId)
+      const wasInProgress = taskBefore?.status === "IN_PROGRESS"
+      
       const task = await apiClient.completeTask(taskId)
-      setCompletedTask(task)
+      
+      const countToday = tasks.filter(t => t.completed && t.taskType === task.taskType && isToday(t.completedAt)).length + 1
+      const typeLabel = TASK_TYPE_META[task.taskType].label
+
+      let description = ""
+      if (wasInProgress) {
+        const actual = task.actualMinutes ?? task.durationMinutes
+        description = `${typeLabel}: ${actual} min (estimated ${task.durationMinutes})`
+      } else {
+        description = `${typeLabel} complete \u2014 ${task.durationMinutes} min.`
+      }
+
+      toast({
+        title: "Session logged",
+        description: (
+          <div className="space-y-1.5 mt-1.5">
+            <p className="text-sm font-medium">{description}</p>
+            {task.taskType === "DEEP" && (
+              <p className="text-xs text-muted-foreground">That's your {getOrdinal(countToday)} deep work session today.</p>
+            )}
+          </div>
+        )
+      })
+
       await fetchTasks()
     } catch (err) {
       const apiError = err as ApiError
@@ -218,24 +242,16 @@ export default function TasksPage() {
           />
         )}
 
-        {/* ── Session completion modal (portal) ─────────────────────────── */}
-        {completedTask && (
-          <SessionComplete
-            task={completedTask}
-            onDismiss={() => setCompletedTask(null)}
-          />
-        )}
-
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
 
           {/* ── Page header ───────────────────────────────────────────────── */}
-          <div className="reveal-up mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="command-surface reveal-up mb-8 flex flex-col gap-4 rounded-lg p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
             <div>
               <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Commitment board</p>
-              <h2 className="text-3xl font-bold">Tasks</h2>
+              <h2 className="text-3xl font-bold text-primary">Tasks</h2>
               <p className="text-muted-foreground">Your active commitments and completed work</p>
             </div>
-            <Button onClick={() => setCreateDialogOpen(true)} className="gap-2" id="create-task-btn">
+            <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 rounded-full px-5 shadow-lg shadow-primary/15" id="create-task-btn">
               <Plus className="h-4 w-4" />
               New Task
             </Button>
@@ -247,7 +263,7 @@ export default function TasksPage() {
             <>
               {/* ── Stat row ────────────────────────────────────────────── */}
               <div className="reveal-up reveal-delay-1 mb-8 grid gap-4 sm:grid-cols-2 lg:max-w-3xl">
-                <Card className="border-l-4 border-l-primary bg-card/80 shadow-sm transition-all hover:shadow-md">
+                <Card className="border border-primary/10 bg-card/85 shadow-sm backdrop-blur transition-all hover:shadow-md">
                   <CardContent className="flex items-center justify-between p-6">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Active Tasks</p>
@@ -259,7 +275,7 @@ export default function TasksPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-l-4 border-l-green-500 bg-card/80 shadow-sm transition-all hover:shadow-md">
+                <Card className="border border-green-500/20 bg-card/85 shadow-sm backdrop-blur transition-all hover:shadow-md">
                   <CardContent className="flex items-center justify-between p-6">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Completed</p>
@@ -293,7 +309,7 @@ export default function TasksPage() {
                 {/* ── Active tab ─────────────────────────────────────────── */}
                 <TabsContent value="active" className="mt-0">
                   {activeTasks.length === 0 ? (
-                    <Card className="border-dashed">
+                    <Card className="border-dashed bg-card/75 shadow-sm backdrop-blur">
                       <CardContent className="flex h-64 flex-col items-center justify-center p-6 text-center">
                         <div className="mb-4 rounded-full bg-muted p-4">
                           <Layers className="h-8 w-8 text-muted-foreground" />
@@ -380,13 +396,22 @@ export default function TasksPage() {
                               {group.tasks.map((task, taskIndex) => (
                                 <div
                                   key={task.id}
-                                  className={`group min-w-[250px] rounded-lg border p-4 shadow-sm transition-all duration-300 sm:min-w-[300px] ${meta.railClassName} ${hasActiveSession ? "cursor-not-allowed" : "hover:-translate-y-1 hover:shadow-md"}`}
+                                  className={`group min-w-[250px] rounded-lg border p-4 shadow-sm backdrop-blur transition-all duration-300 sm:min-w-[300px] ${meta.railClassName} ${hasActiveSession ? "cursor-not-allowed" : "hover:-translate-y-1 hover:shadow-md"}`}
                                 >
                                   <div className="mb-4 flex items-center justify-between">
                                     <span className={`h-2 w-8 rounded-full ${meta.markerClassName}`} />
-                                    {/* Edit / delete only when no session active */}
+                                    {/* Action buttons only when no session active */}
                                     {!hasActiveSession && (
                                       <div className="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          id={`complete-directly-task-${task.id}`}
+                                          onClick={() => handleCompleteTask(task.id)}
+                                          className="h-8 w-8 hover:bg-green-500/10 hover:text-green-500"
+                                        >
+                                          <Check className="h-3.5 w-3.5" />
+                                        </Button>
                                         <Button
                                           size="icon"
                                           variant="ghost"
@@ -461,7 +486,7 @@ export default function TasksPage() {
                 {/* ── Completed tab ──────────────────────────────────────── */}
                 <TabsContent value="completed" className="mt-0">
                   {completedTasks.length === 0 ? (
-                    <Card className="border-dashed">
+                    <Card className="border-dashed bg-card/75 shadow-sm backdrop-blur">
                       <CardContent className="flex h-64 flex-col items-center justify-center text-center">
                         <History className="mb-4 h-12 w-12 text-muted-foreground/50" />
                         <p className="text-muted-foreground">

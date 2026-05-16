@@ -17,7 +17,7 @@ import { BrandedLoader } from "@/components/branded-loader"
 import { useToast } from "@/hooks/use-toast"
 import { TaskTimer } from "@/components/task-timer"
 import { FocusMode } from "@/components/focus-mode"
-import { SessionComplete } from "@/components/session-complete"
+import { getOrdinal, isToday } from "@/lib/utils"
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -60,17 +60,6 @@ function formatMinutes(totalMinutes: number) {
   return `${hours}h ${minutes}m`
 }
 
-function isToday(dateValue: string | null) {
-  if (!dateValue) return false
-  const date = new Date(dateValue)
-  const now = new Date()
-  return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  )
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -87,9 +76,6 @@ export default function DashboardPage() {
   const [startingTaskId, setStartingTaskId] = useState<number | null>(null)
   const [abandoningTaskId, setAbandoningTaskId] = useState<number | null>(null)
   const [workoutSubmitting, setWorkoutSubmitting] = useState(false)
-
-  // Session completion modal
-  const [completedTask, setCompletedTask] = useState<TaskResponse | null>(null)
 
   // ─── Data fetching ───────────────────────────────────────────────────────────
 
@@ -145,9 +131,35 @@ export default function DashboardPage() {
     if (!user?.userId) return
     try {
       setCompletingTaskId(taskId)
+      
+      const taskBefore = dashboard?.taskSummary.activeTasks.find(t => t.id === taskId)
+      const wasInProgress = taskBefore?.status === "IN_PROGRESS"
+      
       const task = await apiClient.completeTask(taskId)
-      // Show the session-complete modal
-      setCompletedTask(task)
+      
+      const countToday = (dashboard?.taskSummary.completedTasks || []).filter(t => t.taskType === task.taskType && isToday(t.completedAt)).length + 1
+      const typeLabel = TASK_TYPE_META[task.taskType].label
+
+      let description = ""
+      if (wasInProgress) {
+        const actual = task.actualMinutes ?? task.durationMinutes
+        description = `${typeLabel}: ${actual} min (estimated ${task.durationMinutes})`
+      } else {
+        description = `${typeLabel} complete \u2014 ${task.durationMinutes} min.`
+      }
+
+      toast({
+        title: "Session logged",
+        description: (
+          <div className="space-y-1.5 mt-1.5">
+            <p className="text-sm font-medium">{description}</p>
+            {task.taskType === "DEEP" && (
+              <p className="text-xs text-muted-foreground">That's your {getOrdinal(countToday)} deep work session today.</p>
+            )}
+          </div>
+        )
+      })
+
       await fetchDashboard()
     } catch (err) {
       const apiError = err as ApiError
@@ -265,14 +277,6 @@ export default function DashboardPage() {
           />
         )}
 
-        {/* ── Session completion modal (portal) ───────────────────────── */}
-        {completedTask && (
-          <SessionComplete
-            task={completedTask}
-            onDismiss={() => setCompletedTask(null)}
-          />
-        )}
-
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
 
           {/* ── Hero / Progress strip ─────────────────────────────────── */}
@@ -284,6 +288,10 @@ export default function DashboardPage() {
                 <p className="mt-2 text-muted-foreground">
                   Focus on what matters. Complete what you've committed to.
                 </p>
+                <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-muted-foreground">
+                  <span className="rounded-full border border-primary/10 bg-background/70 px-3 py-1">Structured execution</span>
+                  <span className="rounded-full border border-primary/10 bg-background/70 px-3 py-1">One active session at a time</span>
+                </div>
               </div>
               <div className="w-full max-w-sm rounded-lg border bg-background/65 p-4 backdrop-blur md:w-80">
                 <div className="flex items-center justify-between gap-3">
@@ -309,7 +317,7 @@ export default function DashboardPage() {
 
           {/* ── Stat cards ───────────────────────────────────────────────── */}
           <div className="reveal-up reveal-delay-1 mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Card className="border-l-4 border-l-primary bg-card/80">
+            <Card className="border border-primary/10 bg-card/85 shadow-sm backdrop-blur">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Momentum Score</CardTitle>
                 <Zap className="h-5 w-5 text-primary" />
@@ -320,7 +328,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-primary bg-card/80">
+            <Card className="border border-primary/10 bg-card/85 shadow-sm backdrop-blur">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Workout Streak</CardTitle>
                 <Flame className="h-5 w-5 text-primary" />
@@ -333,7 +341,7 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-emerald-500 bg-card/80 sm:col-span-2 lg:col-span-1">
+            <Card className="border border-emerald-500/20 bg-card/85 shadow-sm backdrop-blur sm:col-span-2 lg:col-span-1">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Today's Progress</CardTitle>
                 <CheckCircle2 className="h-5 w-5 text-emerald-500" />
@@ -349,7 +357,7 @@ export default function DashboardPage() {
           <div className="reveal-up reveal-delay-2 grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] lg:items-start">
 
             {/* Today's task sequence */}
-            <Card className="order-2 overflow-hidden bg-card/90 lg:order-1">
+            <Card className="order-2 overflow-hidden border-primary/10 bg-card/90 shadow-sm backdrop-blur lg:order-1">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-primary" />
@@ -435,9 +443,24 @@ export default function DashboardPage() {
                             >
                               <div className="mb-4 flex items-center justify-between">
                                 <span className={`h-2 w-8 rounded-full ${meta.markerClassName}`} />
-                                <span className="font-mono text-xs text-muted-foreground">
-                                  {String(taskIndex + 1).padStart(2, "0")}
-                                </span>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-xs text-muted-foreground">
+                                    {String(taskIndex + 1).padStart(2, "0")}
+                                  </span>
+                                  {!hasActiveSession && (
+                                    <div className="opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        id={`dashboard-complete-directly-task-${task.id}`}
+                                        onClick={() => handleCompleteTask(task.id)}
+                                        className="h-8 w-8 hover:bg-green-500/10 hover:text-green-500"
+                                      >
+                                        <Check className="h-3.5 w-3.5" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <div className="min-w-0 space-y-3">
                                 <p className="line-clamp-2 min-h-10 font-semibold leading-tight">{task.title}</p>
@@ -484,7 +507,7 @@ export default function DashboardPage() {
             <div className="order-1 space-y-6 lg:order-2">
 
               {/* Workout card */}
-              <Card className={`border-2 ${fitnessSummary.didWorkoutToday ? "border-green-500/20 bg-green-500/5" : "border-muted"}`}>
+              <Card className={`border ${fitnessSummary.didWorkoutToday ? "border-green-500/20 bg-green-500/5" : "border-primary/10 bg-card/85"} shadow-sm backdrop-blur`}>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-5">
                     <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full ${fitnessSummary.didWorkoutToday ? "bg-green-500 text-white shadow-lg shadow-green-500/25" : "bg-muted text-muted-foreground"}`}>
@@ -532,7 +555,7 @@ export default function DashboardPage() {
               </Card>
 
               {/* Today at a Glance */}
-              <Card>
+              <Card className="border-primary/10 bg-card/85 shadow-sm backdrop-blur">
                 <CardHeader>
                   <CardTitle>Today at a Glance</CardTitle>
                   <CardDescription>A quick read on what remains before the day feels complete.</CardDescription>
