@@ -1,4 +1,37 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080"
+function normalizeBaseUrl(url: string) {
+  return url.replace(/\/+$/, "")
+}
+
+export function resolveApiBaseUrl() {
+  const configuredBaseUrl =
+    process.env.NEXT_PUBLIC_API_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL
+
+  if (configuredBaseUrl) {
+    return normalizeBaseUrl(configuredBaseUrl)
+  }
+
+  if (typeof window !== "undefined") {
+    const { protocol, hostname, origin } = window.location
+    const isLocalHost =
+      hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1"
+
+    if (isLocalHost) {
+      return `${protocol}//${hostname}:8080`
+    }
+
+    return origin
+  }
+
+  return "http://localhost:8080"
+}
+
+export function getGoogleLoginUrl() {
+  return `${resolveApiBaseUrl()}/oauth2/authorization/google`
+}
+
+const API_BASE_URL = resolveApiBaseUrl()
 
 export interface ApiError {
   timestamp: string

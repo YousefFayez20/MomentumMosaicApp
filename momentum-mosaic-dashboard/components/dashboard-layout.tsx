@@ -25,14 +25,14 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="discipline-shell flex min-h-screen flex-col">
-      <header className="sticky top-0 z-50 border-b bg-card/90 shadow-sm shadow-primary/5 backdrop-blur-md">
+      <header className="sticky top-0 z-50 border-b border-white/60 bg-card/80 shadow-sm shadow-primary/5 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link href="/dashboard" aria-label="Go to Momentum Mosaic dashboard">
             <AppLogo size="header" wordmarkClassName="hidden sm:inline" />
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden items-center gap-2 md:flex">
+          <nav className="hidden items-center gap-2 rounded-full border border-primary/10 bg-background/60 px-2 py-1 shadow-sm backdrop-blur md:flex">
             {navigation.map((item) => {
               const Icon = item.icon
               const isActive = pathname === item.href
@@ -40,7 +40,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 <Link key={item.href} href={item.href}>
                   <Button
                     variant={isActive ? "default" : "ghost"}
-                    className={cn("gap-2", isActive && "bg-primary text-primary-foreground")}
+                    className={cn(
+                      "h-9 rounded-full gap-2 px-4",
+                      isActive
+                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                        : "text-muted-foreground hover:bg-card hover:text-foreground",
+                    )}
                   >
                     <Icon className="h-4 w-4" />
                     {item.name}
@@ -51,18 +56,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-2">
-            <div className="hidden text-right md:block">
+            <div className="hidden rounded-full border border-primary/10 bg-background/65 px-3 py-2 text-right shadow-sm backdrop-blur md:block">
               <p className="text-sm font-medium">{user?.name}</p>
               <p className="text-xs text-muted-foreground">{user?.email}</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={logout} className="hidden md:flex">
+            <Button variant="outline" size="icon" onClick={logout} className="hidden rounded-full border-primary/10 bg-background/65 md:flex">
               <LogOut className="h-4 w-4" />
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden"
+              className="rounded-full border-primary/10 bg-background/65 md:hidden"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
@@ -71,7 +76,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="border-t bg-card p-4 md:hidden">
+          <div className="border-t bg-card/90 p-4 backdrop-blur md:hidden">
             <div className="space-y-2">
               {navigation.map((item) => {
                 const Icon = item.icon

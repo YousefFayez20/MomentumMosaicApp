@@ -102,13 +102,14 @@ export default function FitnessPage() {
     <AuthGuard>
       <DashboardLayout>
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold">Workout Discipline</h2>
+          <div className="command-surface mb-8 rounded-lg p-5 sm:p-6">
+            <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Physical consistency</p>
+            <h2 className="text-3xl font-bold text-primary">Workout Discipline</h2>
             <p className="text-muted-foreground">Log today's workout and protect your streak</p>
           </div>
 
           <div className="mb-8 grid gap-4 sm:grid-cols-2">
-            <Card className="border-primary/20 bg-gradient-to-br from-primary/10 to-transparent">
+            <Card className="border border-primary/20 bg-gradient-to-br from-primary/10 to-transparent shadow-sm backdrop-blur">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Current Streak</CardTitle>
                 <Flame className="h-5 w-5 text-primary" />
@@ -119,7 +120,7 @@ export default function FitnessPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-primary/10 bg-card/85 shadow-sm backdrop-blur">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium">Today's Status</CardTitle>
                 <Calendar className="h-5 w-5 text-chart-3" />
@@ -142,7 +143,7 @@ export default function FitnessPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="border-2 border-primary/20">
+            <Card className="border border-primary/20 bg-card/85 shadow-sm backdrop-blur">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Activity className="h-5 w-5 text-primary" />
@@ -196,7 +197,7 @@ export default function FitnessPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-primary/10 bg-card/85 shadow-sm backdrop-blur">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-accent" />
