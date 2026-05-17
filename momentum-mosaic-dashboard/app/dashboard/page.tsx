@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
+import { motion } from "framer-motion"
 import { apiClient, type DashboardResponse, type ApiError, type TaskResponse } from "@/lib/api"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { AuthGuard } from "@/components/auth-guard"
@@ -76,6 +77,7 @@ export default function DashboardPage() {
   const [startingTaskId, setStartingTaskId] = useState<number | null>(null)
   const [abandoningTaskId, setAbandoningTaskId] = useState<number | null>(null)
   const [workoutSubmitting, setWorkoutSubmitting] = useState(false)
+  const [celebratingStats, setCelebratingStats] = useState<{ task: TaskResponse; countToday: number } | null>(null)
 
   // ─── Data fetching ───────────────────────────────────────────────────────────
 
@@ -159,6 +161,10 @@ export default function DashboardPage() {
           </div>
         )
       })
+
+      if (wasInProgress) {
+        setCelebratingStats({ task, countToday })
+      }
 
       await fetchDashboard()
     } catch (err) {
@@ -267,33 +273,36 @@ export default function DashboardPage() {
     <AuthGuard>
       <DashboardLayout>
         {/* ── Focus Mode overlay (portal) ─────────────────────────────── */}
-        {inProgressTask && (
+        {(inProgressTask || celebratingStats) && (
           <FocusMode
-            task={inProgressTask}
-            onComplete={() => handleCompleteTask(inProgressTask.id)}
-            onAbandon={() => handleAbandonTask(inProgressTask.id)}
-            completing={completingTaskId === inProgressTask.id}
-            abandoning={abandoningTaskId === inProgressTask.id}
+            task={celebratingStats ? celebratingStats.task : inProgressTask!}
+            isCelebrating={!!celebratingStats}
+            completedCountToday={celebratingStats?.countToday ?? 0}
+            onComplete={() => handleCompleteTask(inProgressTask!.id)}
+            onAbandon={() => handleAbandonTask(inProgressTask!.id)}
+            onCloseCelebration={() => setCelebratingStats(null)}
+            completing={completingTaskId === (inProgressTask?.id ?? -1)}
+            abandoning={abandoningTaskId === (inProgressTask?.id ?? -1)}
           />
         )}
 
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
 
           {/* ── Hero / Progress strip ─────────────────────────────────── */}
-          <div className="command-surface reveal-up mb-8 overflow-hidden rounded-lg p-5 sm:p-7">
-            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} className="command-surface mb-10 overflow-hidden rounded-2xl p-6 sm:p-8">
+            <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Daily discipline</p>
-                <h2 className="text-3xl font-bold text-primary sm:text-4xl">Today's Momentum</h2>
+                <p className="mb-3 tracking-widest text-xs font-bold uppercase text-muted-foreground/80">Daily discipline</p>
+                <h2 className="text-3xl font-extrabold text-primary tracking-tight sm:text-5xl">Today's Momentum</h2>
                 <p className="mt-2 text-muted-foreground">
                   Focus on what matters. Complete what you've committed to.
                 </p>
-                <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-muted-foreground">
-                  <span className="rounded-full border border-primary/10 bg-background/70 px-3 py-1">Structured execution</span>
-                  <span className="rounded-full border border-primary/10 bg-background/70 px-3 py-1">One active session at a time</span>
+                <div className="mt-6 flex flex-wrap gap-2 text-xs font-semibold text-muted-foreground">
+                  <span className="rounded-full border border-primary/10 bg-white/60 px-4 py-1.5 shadow-sm backdrop-blur-sm">Structured execution</span>
+                  <span className="rounded-full border border-primary/10 bg-white/60 px-4 py-1.5 shadow-sm backdrop-blur-sm">One active session at a time</span>
                 </div>
               </div>
-              <div className="w-full max-w-sm rounded-lg border bg-background/65 p-4 backdrop-blur md:w-80">
+              <div className="w-full max-w-sm rounded-xl border border-white/50 bg-white/40 p-5 shadow-sm backdrop-blur-md md:w-80">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-xs font-medium uppercase text-muted-foreground">
                     {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
@@ -313,12 +322,12 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* ── Stat cards ───────────────────────────────────────────────── */}
-          <div className="reveal-up reveal-delay-1 mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Card className="border border-primary/10 bg-card/85 shadow-sm backdrop-blur">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.1 }} className="mb-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Momentum Score</CardTitle>
                 <Zap className="h-5 w-5 text-primary" />
               </CardHeader>
@@ -328,8 +337,8 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="border border-primary/10 bg-card/85 shadow-sm backdrop-blur">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Workout Streak</CardTitle>
                 <Flame className="h-5 w-5 text-primary" />
               </CardHeader>
@@ -341,8 +350,8 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="border border-emerald-500/20 bg-card/85 shadow-sm backdrop-blur sm:col-span-2 lg:col-span-1">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <Card className="border border-emerald-500/20 bg-gradient-to-br from-emerald-50/40 to-white/40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl sm:col-span-2 lg:col-span-1">
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <CardTitle className="text-sm font-medium text-muted-foreground">Today's Progress</CardTitle>
                 <CheckCircle2 className="h-5 w-5 text-emerald-500" />
               </CardHeader>
@@ -351,14 +360,14 @@ export default function DashboardPage() {
                 <p className="mt-1 text-xs font-medium text-muted-foreground">tasks completed today</p>
               </CardContent>
             </Card>
-          </div>
+          </motion.div>
 
           {/* ── Main grid ────────────────────────────────────────────────── */}
-          <div className="reveal-up reveal-delay-2 grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] lg:items-start">
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }} className="grid gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] lg:items-start">
 
             {/* Today's task sequence */}
-            <Card className="order-2 overflow-hidden border-primary/10 bg-card/90 shadow-sm backdrop-blur lg:order-1">
-              <CardHeader>
+            <Card className="order-2 overflow-hidden border-white/60 bg-card/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl rounded-2xl lg:order-1">
+              <CardHeader className="bg-white/40 border-b border-white/40 pb-5">
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-primary" />
                   Today's Sequence
@@ -367,7 +376,7 @@ export default function DashboardPage() {
                   Move left to right through the commitments that still need attention.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-5">
+              <CardContent className="space-y-8 pt-6">
 
                 {/* ── IN_PROGRESS task — shown prominently at top ── */}
                 {inProgressTask && (() => {
@@ -380,16 +389,16 @@ export default function DashboardPage() {
                           <InProgressIcon className="mr-1 h-3.5 w-3.5" />
                           {meta.label}
                         </Badge>
-                        <span className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 dark:text-indigo-400">
-                          <span className="relative flex h-1.5 w-1.5">
+                        <span className="flex items-center gap-1.5 text-xs font-bold tracking-wide uppercase text-indigo-500 dark:text-indigo-400">
+                          <span className="relative flex h-2 w-2">
                             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
-                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500 breathe-opacity" />
                           </span>
                           In Progress
                         </span>
                       </div>
-                      <div className={`rounded-lg border-2 border-indigo-400/40 p-4 shadow-md ${meta.railClassName}`}>
-                        <p className="mb-3 font-semibold leading-tight">{inProgressTask.title}</p>
+                      <div className={`rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50/80 to-white/60 p-6 shadow-lg shadow-indigo-500/5 ${meta.railClassName}`}>
+                        <p className="mb-4 text-xl font-bold leading-tight">{inProgressTask.title}</p>
                         <TaskTimer
                           startedAt={inProgressTask.startedAt}
                           durationMinutes={inProgressTask.durationMinutes}
@@ -430,16 +439,16 @@ export default function DashboardPage() {
                               {meta.label}
                             </Badge>
                           </div>
-                          <span className="text-xs font-medium uppercase text-muted-foreground">
+                          <span className="text-xs font-bold tracking-wider uppercase text-muted-foreground/70">
                             {group.tasks.length} {group.tasks.length === 1 ? "task" : "tasks"}
                           </span>
                         </div>
 
-                        <div className="commitment-rail flex gap-3 overflow-x-auto pb-3">
+                        <div className="commitment-rail flex gap-4 overflow-x-auto pb-4">
                           {group.tasks.map((task, taskIndex) => (
                             <div
                               key={task.id}
-                              className={`min-w-[240px] rounded-lg border p-4 shadow-sm transition-all duration-300 sm:min-w-[280px] ${meta.railClassName} ${hasActiveSession ? "cursor-not-allowed" : "hover:-translate-y-1 hover:shadow-md"}`}
+                              className={`min-w-[260px] rounded-xl border border-white/60 bg-white/40 p-5 shadow-sm backdrop-blur-sm sm:min-w-[300px] ${meta.railClassName} ${hasActiveSession ? "cursor-not-allowed opacity-50 grayscale-[20%]" : "hover-premium"}`}
                             >
                               <div className="mb-4 flex items-center justify-between">
                                 <span className={`h-2 w-8 rounded-full ${meta.markerClassName}`} />
@@ -507,8 +516,8 @@ export default function DashboardPage() {
             <div className="order-1 space-y-6 lg:order-2">
 
               {/* Workout card */}
-              <Card className={`border ${fitnessSummary.didWorkoutToday ? "border-green-500/20 bg-green-500/5" : "border-primary/10 bg-card/85"} shadow-sm backdrop-blur`}>
-                <CardContent className="p-6">
+              <Card className={`border border-white/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl rounded-2xl overflow-hidden ${fitnessSummary.didWorkoutToday ? "bg-gradient-to-br from-green-50/60 to-white/40 hover-premium" : "bg-gradient-to-br from-card/80 to-muted/30 hover-premium"}`}>
+                <CardContent className="p-7">
                   <div className="flex items-center gap-5">
                     <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full ${fitnessSummary.didWorkoutToday ? "bg-green-500 text-white shadow-lg shadow-green-500/25" : "bg-muted text-muted-foreground"}`}>
                       {fitnessSummary.didWorkoutToday ? <Activity className="h-8 w-8" /> : <Mountain className="h-8 w-8" />}
@@ -555,25 +564,25 @@ export default function DashboardPage() {
               </Card>
 
               {/* Today at a Glance */}
-              <Card className="border-primary/10 bg-card/85 shadow-sm backdrop-blur">
-                <CardHeader>
+              <Card className="border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl">
+                <CardHeader className="bg-white/40 border-b border-white/40 pb-5">
                   <CardTitle>Today at a Glance</CardTitle>
                   <CardDescription>A quick read on what remains before the day feels complete.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="rounded-lg border bg-muted/20 p-4">
-                    <div className="text-sm font-medium text-muted-foreground">Tasks still open</div>
-                    <div className="mt-1 text-2xl font-bold">{allActiveTasks.length}</div>
+                <CardContent className="space-y-4 pt-5">
+                  <div className="rounded-xl border border-white/60 bg-white/40 p-4 shadow-sm">
+                    <div className="text-xs font-bold tracking-wider uppercase text-muted-foreground/70">Tasks still open</div>
+                    <div className="mt-1 text-2xl font-extrabold text-primary">{allActiveTasks.length}</div>
                   </div>
-                  <div className="rounded-lg border bg-muted/20 p-4">
-                    <div className="text-sm font-medium text-muted-foreground">Time still planned</div>
-                    <div className="mt-1 text-2xl font-bold">
+                  <div className="rounded-xl border border-white/60 bg-white/40 p-4 shadow-sm">
+                    <div className="text-xs font-bold tracking-wider uppercase text-muted-foreground/70">Time still planned</div>
+                    <div className="mt-1 text-2xl font-extrabold text-primary">
                       {formatMinutes(allActiveTasks.reduce((s, t) => s + t.durationMinutes, 0))}
                     </div>
                   </div>
-                  <div className="rounded-lg border bg-muted/20 p-4">
-                    <div className="text-sm font-medium text-muted-foreground">Next best focus</div>
-                    <div className="mt-1 text-base font-semibold">
+                  <div className="rounded-xl border border-white/60 bg-white/40 p-4 shadow-sm">
+                    <div className="text-xs font-bold tracking-wider uppercase text-muted-foreground/70">Next best focus</div>
+                    <div className="mt-1 text-base font-bold text-primary">
                       {inProgressTask
                         ? `${TASK_TYPE_META[inProgressTask.taskType].label} in session`
                         : groupedPlanned[0]
@@ -584,7 +593,7 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
             </div>
-          </div>
+          </motion.div>
         </div>
       </DashboardLayout>
     </AuthGuard>

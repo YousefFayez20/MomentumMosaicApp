@@ -1,4 +1,7 @@
+"use client"
+
 import Image from "next/image"
+import { motion } from "framer-motion"
 
 import { APP_LOGO_ALT, APP_LOGO_PATH, APP_NAME } from "@/lib/brand"
 import { cn } from "@/lib/utils"
@@ -39,14 +42,40 @@ export function AppLogo({
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <Image
-        src={APP_LOGO_PATH}
-        alt={APP_LOGO_ALT}
-        width={510}
-        height={510}
-        priority={priority}
-        className={cn("shrink-0 object-contain shadow-sm ring-1 ring-border/70", styles.mark, markClassName)}
-      />
+      <motion.div
+        animate={{
+          y: [0, -1.5, 0],
+        }}
+        transition={{
+          duration: 6,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="relative shrink-0 flex items-center justify-center"
+      >
+        <Image
+          src={APP_LOGO_PATH}
+          alt={APP_LOGO_ALT}
+          width={510}
+          height={510}
+          priority={priority}
+          className={cn("relative z-10 shrink-0 object-contain shadow-sm ring-1 ring-border/70 transition-transform duration-500 hover:scale-105", styles.mark, markClassName)}
+        />
+        {/* Soft elegant glowing ring that pulses and rotates behind the logo */}
+        <motion.div
+          animate={{
+            scale: [0.95, 1.1, 0.95],
+            opacity: [0.2, 0.5, 0.2],
+            rotate: [0, 360],
+          }}
+          transition={{
+            scale: { duration: 8, repeat: Infinity, ease: "easeInOut" },
+            opacity: { duration: 8, repeat: Infinity, ease: "easeInOut" },
+            rotate: { duration: 60, repeat: Infinity, ease: "linear" },
+          }}
+          className="absolute inset-[-4px] rounded-full bg-gradient-to-tr from-primary/20 via-accent/10 to-transparent blur-[8px] pointer-events-none"
+        />
+      </motion.div>
       {showWordmark && (
         <span className={cn("font-extrabold tracking-tight text-foreground", styles.text, wordmarkClassName)}>
           Momentum <span className="text-primary">Mosaic</span>
