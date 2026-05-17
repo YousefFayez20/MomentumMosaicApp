@@ -6,6 +6,7 @@ import type { TaskResponse } from "@/lib/api"
 import { Brain, Dumbbell, Shield, X, Zap } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { getOrdinal } from "@/lib/utils"
 
 const TASK_TYPE_META: Record<
   TaskResponse["taskType"],
@@ -140,17 +141,61 @@ interface FocusModeProps {
   onAbandon: () => Promise<void>
   completing: boolean
   abandoning: boolean
+  isCelebrating?: boolean
+  completedCountToday?: number
+  onCloseCelebration?: () => void
 }
 
-export function FocusMode({ task, onComplete, onAbandon, completing, abandoning }: FocusModeProps) {
+export function FocusMode({
+  task,
+  onComplete,
+  onAbandon,
+  completing,
+  abandoning,
+  isCelebrating = false,
+  completedCountToday = 0,
+  onCloseCelebration,
+}: FocusModeProps) {
   const [elapsed, setElapsed] = useState(0)
   const [mounted, setMounted] = useState(false)
   const [showAbandonConfirm, setShowAbandonConfirm] = useState(false)
+  const [particles, setParticles] = useState<Array<{
+    id: number
+    left: string
+    color: string
+    delay: string
+    duration: string
+    size: string
+    shape: string
+    animation: string
+  }>>([])
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  useEffect(() => {
+    if (isCelebrating) {
+      const colors = ["#6366f1", "#38bdf8", "#34d399", "#a855f7", "#f43f5e", "#eab308"]
+      const newParticles = Array.from({ length: 35 }).map((_, i) => {
+        const isLeftDrift = Math.random() > 0.5
+        return {
+          id: i,
+          left: `${Math.random() * 100}vw`,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          delay: `${Math.random() * 3.5}s`,
+          duration: `${3.5 + Math.random() * 4}s`,
+          size: `${4 + Math.random() * 7}px`,
+          shape: Math.random() > 0.4 ? "50%" : "2px",
+          animation: isLeftDrift ? "particle-drift-left" : "particle-drift-right"
+        }
+      })
+      setParticles(newParticles)
+    } else {
+      setParticles([])
+    }
+  }, [isCelebrating])
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow
@@ -163,17 +208,17 @@ export function FocusMode({ task, onComplete, onAbandon, completing, abandoning 
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !isCelebrating) {
         setShowAbandonConfirm((current) => !current)
       }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [])
+  }, [isCelebrating])
 
   useEffect(() => {
-    if (!task.startedAt) return
+    if (!task.startedAt || isCelebrating) return
 
     const startTime = new Date(task.startedAt).getTime()
     const tick = () => {
@@ -186,7 +231,7 @@ export function FocusMode({ task, onComplete, onAbandon, completing, abandoning 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
-  }, [task.startedAt])
+  }, [task.startedAt, isCelebrating])
 
   const meta = TASK_TYPE_META[task.taskType]
   const TypeIcon = meta.icon
@@ -210,140 +255,227 @@ export function FocusMode({ task, onComplete, onAbandon, completing, abandoning 
   if (!mounted) return null
 
   const overlay = (
-    <div className="focus-overlay dark" role="dialog" aria-modal="true" aria-labelledby="focus-session-title">
+    <div className="focus-overlay dark" role="dialog" aria-modal="true" aria-labelledby={isCelebrating ? "celebration-title" : "focus-session-title"}>
       <div className="focus-ambient" aria-hidden="true" style={{ "--focus-glow": meta.glowColor } as CSSProperties} />
 
-      <div className="focus-card">
-        <div className="mb-7 flex items-start justify-between gap-4">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground/70">
-              Focus Session Active
-            </p>
-            <Badge className={`gap-1.5 border ${meta.badgeClass}`}>
-              <TypeIcon className="h-3 w-3" />
-              {meta.label}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-2 rounded-full border border-muted/20 bg-muted/10 px-3 py-1.5">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            </span>
-            <span className="text-xs font-medium text-emerald-400">Live</span>
-          </div>
-        </div>
+      {/* Render celebration floating particles */}
+      {isCelebrating && particles.map((p) => (
+        <div
+          key={p.id}
+          className="focus-particle"
+          style={{
+            left: p.left,
+            backgroundColor: p.color,
+            animationDelay: p.delay,
+            animationDuration: p.duration,
+            animationName: p.animation,
+            width: p.size,
+            height: p.size,
+            borderRadius: p.shape,
+            animationTimingFunction: "cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+            animationIterationCount: "infinite"
+          }}
+        />
+      ))}
 
-        <div className="mb-8 space-y-3 text-center sm:text-left">
-          <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground/55">
-            One active commitment
+      {isCelebrating ? (
+        <div className="focus-card relative overflow-hidden flex flex-col items-center text-center p-8 sm:p-10 max-w-md">
+          {/* Breathing pulsed circular checkmark badge */}
+          <div
+            className="complete-icon-enter mb-6 flex h-20 w-20 items-center justify-center rounded-full border-2 border-dashed focus-ring-breathe-glow"
+            style={{
+              borderColor: meta.ringColor,
+              animationDuration: "500ms",
+              filter: `drop-shadow(0 0 8px ${meta.glowColor})`
+            }}
+          >
+            <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
+              <path
+                className="checkmark-path"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M5 13l4 4L19 7"
+                stroke={meta.ringColor}
+              />
+            </svg>
+          </div>
+
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground/75 mb-2">
+            Focus Block Complete
           </p>
-          <h2 id="focus-session-title" className="text-2xl font-bold leading-tight text-foreground sm:text-3xl">
+          <h2 id="celebration-title" className="text-2xl font-bold leading-tight text-foreground mb-4 sm:text-3xl line-clamp-2">
             {task.title}
           </h2>
-          <p className="mx-auto max-w-xl text-sm leading-6 text-muted-foreground sm:mx-0">
-            {meta.intention}
-          </p>
-        </div>
 
-        <div className="mb-7 flex flex-col items-center gap-4">
-          <CircularProgressRing
-            progress={progress}
-            elapsed={elapsed}
-            ringColor={meta.ringColor}
-            glowColor={meta.glowColor}
-            overtime={overtime}
-          />
+          <div className="h-[1px] w-12 bg-muted/40 mb-5" />
 
-          <div className="w-full max-w-sm space-y-2">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{overtime ? `${task.durationMinutes}m target reached` : formatRemaining(remainingSeconds)}</span>
-              <span>{progressPercent}%</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-muted/30">
-              <div
-                className="h-full rounded-full transition-all duration-1000"
-                style={{
-                  width: `${progressPercent}%`,
-                  backgroundColor: overtime ? "#f87171" : meta.ringColor,
-                }}
-              />
-            </div>
+          {/* Time feedback actual vs estimated duration */}
+          <div className="mb-6 space-y-1">
+            <p className="text-xs uppercase tracking-wider text-muted-foreground/60">Logged duration</p>
+            <p className="text-xl font-bold text-foreground tracking-tight">
+              {meta.label}: {task.actualMinutes ?? Math.max(1, Math.round(elapsed / 60))} min
+            </p>
+            <p className="text-xs text-muted-foreground/60">
+              estimated {task.durationMinutes} min
+            </p>
           </div>
-        </div>
 
-        <div className="mb-6 rounded-2xl border border-muted/20 bg-muted/10 px-4 py-3 text-center">
-          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-            <Shield className="h-4 w-4" style={{ color: meta.ringColor }} />
-            <span>{meta.mantra}</span>
-          </div>
-        </div>
+          {/* Streak count completed today for DEEP tasks */}
+          {task.taskType === "DEEP" && completedCountToday > 0 && (
+            <div className="mb-6 w-full rounded-xl border border-indigo-500/25 bg-indigo-500/5 px-5 py-3 text-center">
+              <p className="text-xs text-indigo-400 font-semibold tracking-wide uppercase mb-0.5">Consistency compounds</p>
+              <p className="text-sm text-indigo-200">
+                That's your {getOrdinal(completedCountToday)} deep work session today.
+              </p>
+            </div>
+          )}
 
-        {!showAbandonConfirm ? (
-          <div className="space-y-3">
-            <Button
-              id="focus-complete-btn"
-              className="h-12 w-full gap-2 text-base font-semibold shadow-lg"
-              style={{ backgroundColor: meta.ringColor, color: "#fff", boxShadow: `0 16px 36px ${meta.glowColor}` }}
-              onClick={handleComplete}
-              disabled={completing || abandoning}
-            >
-              {completing ? (
-                <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  Completing...
-                </>
-              ) : (
-                "Complete Session"
-              )}
-            </Button>
-            <div className="text-center">
-              <button
-                id="focus-abandon-btn"
-                className="text-xs text-muted-foreground/60 underline-offset-4 transition-colors hover:text-muted-foreground hover:underline disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={() => setShowAbandonConfirm(true)}
-                disabled={completing || abandoning}
-              >
-                Abandon session
-              </button>
+          <Button
+            id="focus-celebration-continue-btn"
+            className="h-12 w-full gap-2 text-base font-semibold shadow-lg mt-2 cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+            style={{
+              backgroundColor: meta.ringColor,
+              color: "#fff",
+              boxShadow: `0 16px 36px ${meta.glowColor}`
+            }}
+            onClick={onCloseCelebration}
+          >
+            Acknowledge & Continue
+          </Button>
+        </div>
+      ) : (
+        <div className="focus-card">
+          <div className="mb-7 flex items-start justify-between gap-4">
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground/70">
+                Focus Session Active
+              </p>
+              <Badge className={`gap-1.5 border ${meta.badgeClass}`}>
+                <TypeIcon className="h-3 w-3" />
+                {meta.label}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2 rounded-full border border-muted/20 bg-muted/10 px-3 py-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <span className="text-xs font-medium text-emerald-400">Live</span>
             </div>
           </div>
-        ) : (
-          <div className="space-y-4 rounded-xl border border-destructive/30 bg-destructive/5 p-5">
-            <div className="flex items-start gap-3">
-              <X className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">Abandon this session?</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  The task returns to planned. Keep going if this block still matters.
-                </p>
+
+          <div className="mb-8 space-y-3 text-center sm:text-left">
+            <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground/55">
+              One active commitment
+            </p>
+            <h2 id="focus-session-title" className="text-2xl font-bold leading-tight text-foreground sm:text-3xl">
+              {task.title}
+            </h2>
+            <p className="mx-auto max-w-xl text-sm leading-6 text-muted-foreground sm:mx-0">
+              {meta.intention}
+            </p>
+          </div>
+
+          <div className="mb-7 flex flex-col items-center gap-4">
+            <CircularProgressRing
+              progress={progress}
+              elapsed={elapsed}
+              ringColor={meta.ringColor}
+              glowColor={meta.glowColor}
+              overtime={overtime}
+            />
+
+            <div className="w-full max-w-sm space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{overtime ? `${task.durationMinutes}m target reached` : formatRemaining(remainingSeconds)}</span>
+                <span>{progressPercent}%</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-muted/30">
+                <div
+                  className="h-full rounded-full transition-all duration-1000"
+                  style={{
+                    width: `${progressPercent}%`,
+                    backgroundColor: overtime ? "#f87171" : meta.ringColor,
+                  }}
+                />
               </div>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => setShowAbandonConfirm(false)}
-                disabled={abandoning}
-              >
-                Keep going
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="flex-1 gap-1.5"
-                onClick={handleAbandon}
-                disabled={abandoning}
-              >
-                {abandoning ? (
-                  <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : null}
-                {abandoning ? "Abandoning..." : "Yes, abandon"}
-              </Button>
+          </div>
+
+          <div className="mb-6 rounded-2xl border border-muted/20 bg-muted/10 px-4 py-3 text-center">
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Shield className="h-4 w-4" style={{ color: meta.ringColor }} />
+              <span>{meta.mantra}</span>
             </div>
           </div>
-        )}
-      </div>
+
+          {!showAbandonConfirm ? (
+            <div className="space-y-3">
+              <Button
+                id="focus-complete-btn"
+                className="h-12 w-full gap-2 text-base font-semibold shadow-lg"
+                style={{ backgroundColor: meta.ringColor, color: "#fff", boxShadow: `0 16px 36px ${meta.glowColor}` }}
+                onClick={handleComplete}
+                disabled={completing || abandoning}
+              >
+                {completing ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    Completing...
+                  </>
+                ) : (
+                  "Complete Session"
+                )}
+              </Button>
+              <div className="text-center">
+                <button
+                  id="focus-abandon-btn"
+                  className="text-xs text-muted-foreground/60 underline-offset-4 transition-colors hover:text-muted-foreground hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => setShowAbandonConfirm(true)}
+                  disabled={completing || abandoning}
+                >
+                  Abandon session
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4 rounded-xl border border-destructive/30 bg-destructive/5 p-5">
+              <div className="flex items-start gap-3">
+                <X className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Abandon this session?</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    The task returns to planned. Keep going if this block still matters.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => setShowAbandonConfirm(false)}
+                  disabled={abandoning}
+                >
+                  Keep going
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="flex-1 gap-1.5"
+                  onClick={handleAbandon}
+                  disabled={abandoning}
+                >
+                  {abandoning ? (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : null}
+                  {abandoning ? "Abandoning..." : "Yes, abandon"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 

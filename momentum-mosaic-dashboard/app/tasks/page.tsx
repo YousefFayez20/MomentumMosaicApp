@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
+import { motion } from "framer-motion"
 import { apiClient, type TaskResponse, type ApiError } from "@/lib/api"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { AuthGuard } from "@/components/auth-guard"
@@ -87,6 +88,7 @@ export default function TasksPage() {
   const [startingTaskId, setStartingTaskId] = useState<number | null>(null)
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null)
   const [abandoningTaskId, setAbandoningTaskId] = useState<number | null>(null)
+  const [celebratingStats, setCelebratingStats] = useState<{ task: TaskResponse; countToday: number } | null>(null)
 
   // ─── Data fetching ────────────────────────────────────────────────────────────
 
@@ -166,6 +168,10 @@ export default function TasksPage() {
         )
       })
 
+      if (wasInProgress) {
+        setCelebratingStats({ task, countToday })
+      }
+
       await fetchTasks()
     } catch (err) {
       const apiError = err as ApiError
@@ -232,38 +238,41 @@ export default function TasksPage() {
       <DashboardLayout>
 
         {/* ── Focus Mode overlay (portal) ───────────────────────────────── */}
-        {inProgressTask && (
+        {(inProgressTask || celebratingStats) && (
           <FocusMode
-            task={inProgressTask}
-            onComplete={() => handleCompleteTask(inProgressTask.id)}
-            onAbandon={() => handleAbandonTask(inProgressTask.id)}
-            completing={completingTaskId === inProgressTask.id}
-            abandoning={abandoningTaskId === inProgressTask.id}
+            task={celebratingStats ? celebratingStats.task : inProgressTask!}
+            isCelebrating={!!celebratingStats}
+            completedCountToday={celebratingStats?.countToday ?? 0}
+            onComplete={() => handleCompleteTask(inProgressTask!.id)}
+            onAbandon={() => handleAbandonTask(inProgressTask!.id)}
+            onCloseCelebration={() => setCelebratingStats(null)}
+            completing={completingTaskId === (inProgressTask?.id ?? -1)}
+            abandoning={abandoningTaskId === (inProgressTask?.id ?? -1)}
           />
         )}
 
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
 
           {/* ── Page header ───────────────────────────────────────────────── */}
-          <div className="command-surface reveal-up mb-8 flex flex-col gap-4 rounded-lg p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} className="command-surface mb-10 flex flex-col gap-5 rounded-2xl p-6 sm:flex-row sm:items-end sm:justify-between sm:p-8 hover-premium">
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">Commitment board</p>
-              <h2 className="text-3xl font-bold text-primary">Tasks</h2>
-              <p className="text-muted-foreground">Your active commitments and completed work</p>
+              <p className="mb-3 tracking-widest text-xs font-bold uppercase text-muted-foreground/80">Commitment board</p>
+              <h2 className="text-3xl font-extrabold tracking-tight text-primary sm:text-4xl">Tasks</h2>
+              <p className="mt-2 text-muted-foreground">Your active commitments and completed work</p>
             </div>
             <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 rounded-full px-5 shadow-lg shadow-primary/15" id="create-task-btn">
               <Plus className="h-4 w-4" />
               New Task
             </Button>
-          </div>
+          </motion.div>
 
           {loading ? (
             <BrandedLoader className="h-64" label="Loading tasks" />
           ) : (
             <>
               {/* ── Stat row ────────────────────────────────────────────── */}
-              <div className="reveal-up reveal-delay-1 mb-8 grid gap-4 sm:grid-cols-2 lg:max-w-3xl">
-                <Card className="border border-primary/10 bg-card/85 shadow-sm backdrop-blur transition-all hover:shadow-md">
+              <div className="reveal-up reveal-delay-1 mb-10 grid gap-5 sm:grid-cols-2 lg:max-w-3xl">
+                <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl">
                   <CardContent className="flex items-center justify-between p-6">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Active Tasks</p>
@@ -275,7 +284,7 @@ export default function TasksPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="border border-green-500/20 bg-card/85 shadow-sm backdrop-blur transition-all hover:shadow-md">
+                <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl">
                   <CardContent className="flex items-center justify-between p-6">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Completed</p>
@@ -290,8 +299,8 @@ export default function TasksPage() {
 
               {/* ── Tabs ─────────────────────────────────────────────────── */}
               <Tabs defaultValue="active" className="reveal-up reveal-delay-2 w-full">
-                <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <TabsList className="grid w-full max-w-md grid-cols-2 rounded-full p-1">
+                <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <TabsList className="grid w-full max-w-md grid-cols-2 rounded-xl p-1 bg-white/40 shadow-sm border border-white/60 backdrop-blur-md">
                     <TabsTrigger value="active" className="rounded-full">
                       Active ({activeTasks.length})
                     </TabsTrigger>
@@ -309,7 +318,7 @@ export default function TasksPage() {
                 {/* ── Active tab ─────────────────────────────────────────── */}
                 <TabsContent value="active" className="mt-0">
                   {activeTasks.length === 0 ? (
-                    <Card className="border-dashed bg-card/75 shadow-sm backdrop-blur">
+                    <Card className="border-white/60 bg-white/40 shadow-sm backdrop-blur-xl rounded-2xl border-dashed">
                       <CardContent className="flex h-64 flex-col items-center justify-center p-6 text-center">
                         <div className="mb-4 rounded-full bg-muted p-4">
                           <Layers className="h-8 w-8 text-muted-foreground" />
@@ -341,22 +350,22 @@ export default function TasksPage() {
                               <span className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 dark:text-indigo-400">
                                 <span className="relative flex h-1.5 w-1.5">
                                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
-                                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-500 breathe-opacity" />
                                 </span>
                                 In Progress
                               </span>
                             </div>
 
                             <div
-                              className={`group rounded-lg border-2 p-4 shadow-md ${meta.railClassName} ${meta.borderActive}`}
+                              className={`group rounded-xl border-2 p-6 shadow-lg shadow-indigo-500/5 bg-gradient-to-br from-indigo-50/80 to-white/60 ${meta.borderActive}`}
                             >
-                              <div className="mb-3 flex items-start justify-between">
+                              <div className="mb-4 flex items-start justify-between">
                                 <span className={`mt-1 h-2 w-8 rounded-full ${meta.markerClassName}`} />
                                 {/* No edit/delete during active session */}
                               </div>
-                              <div className="space-y-3">
-                                <p className="font-mono text-xs text-muted-foreground">01</p>
-                                <h3 className="line-clamp-2 text-lg font-semibold leading-tight">
+                              <div className="space-y-4">
+                                <p className="font-mono text-xs font-bold text-muted-foreground/60">01</p>
+                                <h3 className="line-clamp-2 text-2xl font-bold leading-tight text-primary">
                                   {inProgressTask.title}
                                 </h3>
                                 <TaskTimer
@@ -387,16 +396,16 @@ export default function TasksPage() {
                                 <GroupIcon className="h-4 w-4" />
                                 {meta.label}
                               </div>
-                              <span className="text-xs font-medium uppercase text-muted-foreground">
+                              <span className="text-xs font-bold tracking-wider uppercase text-muted-foreground/70">
                                 {group.tasks.length} {group.tasks.length === 1 ? "commitment" : "commitments"}
                               </span>
                             </div>
 
-                            <div className="commitment-rail flex gap-3 overflow-x-auto pb-3">
+                            <div className="commitment-rail flex gap-4 overflow-x-auto pb-4">
                               {group.tasks.map((task, taskIndex) => (
                                 <div
                                   key={task.id}
-                                  className={`group min-w-[250px] rounded-lg border p-4 shadow-sm backdrop-blur transition-all duration-300 sm:min-w-[300px] ${meta.railClassName} ${hasActiveSession ? "cursor-not-allowed" : "hover:-translate-y-1 hover:shadow-md"}`}
+                                  className={`group min-w-[260px] rounded-xl border border-white/60 bg-white/40 p-5 shadow-sm backdrop-blur-md sm:min-w-[320px] ${meta.railClassName} ${hasActiveSession ? "cursor-not-allowed opacity-50 grayscale-[20%]" : "hover-premium"}`}
                                 >
                                   <div className="mb-4 flex items-center justify-between">
                                     <span className={`h-2 w-8 rounded-full ${meta.markerClassName}`} />
@@ -434,12 +443,12 @@ export default function TasksPage() {
                                     )}
                                   </div>
 
-                                  <div className="space-y-3">
+                                  <div className="space-y-4">
                                     <div>
-                                      <p className="mb-1 font-mono text-xs text-muted-foreground">
+                                      <p className="mb-2 font-mono text-xs font-bold text-muted-foreground/60">
                                         {String(taskIndex + 1).padStart(2, "0")}
                                       </p>
-                                      <h3 className="line-clamp-2 min-h-12 text-lg font-semibold leading-tight">
+                                      <h3 className="line-clamp-2 min-h-[3rem] text-lg font-bold leading-tight text-primary">
                                         {task.title}
                                       </h3>
                                     </div>
@@ -486,7 +495,7 @@ export default function TasksPage() {
                 {/* ── Completed tab ──────────────────────────────────────── */}
                 <TabsContent value="completed" className="mt-0">
                   {completedTasks.length === 0 ? (
-                    <Card className="border-dashed bg-card/75 shadow-sm backdrop-blur">
+                    <Card className="border-white/60 bg-white/40 shadow-sm backdrop-blur-xl rounded-2xl border-dashed">
                       <CardContent className="flex h-64 flex-col items-center justify-center text-center">
                         <History className="mb-4 h-12 w-12 text-muted-foreground/50" />
                         <p className="text-muted-foreground">
@@ -495,13 +504,13 @@ export default function TasksPage() {
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                       {completedTasks.map((task) => (
                         <Card
                           key={task.id}
-                          className="border-l-4 border-l-muted opacity-75 transition-opacity hover:opacity-100"
+                          className="border border-white/60 bg-gradient-to-br from-card/40 to-muted/20 shadow-sm backdrop-blur-xl rounded-2xl opacity-80 hover-premium hover:opacity-100"
                         >
-                          <CardHeader className="pb-3">
+                          <CardHeader className="pb-3 border-b border-white/30 bg-white/20">
                             <div className="flex items-start justify-between">
                               <Badge variant="outline" className="opacity-70">
                                 {task.taskType}
