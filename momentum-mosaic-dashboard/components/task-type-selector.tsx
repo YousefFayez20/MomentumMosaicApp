@@ -22,19 +22,21 @@ export function TaskTypeSelector({ value, onValueChange }: TaskTypeSelectorProps
     <ToggleGroup
       type="single"
       value={value}
-      onValueChange={(v) => onValueChange(v as TaskType)}
-      className="flex gap-2"
+      onValueChange={(v) => {
+        if (v) onValueChange(v as TaskType);
+      }}
+      className="flex w-full p-1 bg-muted/60 border border-white/50 dark:border-white/5 dark:bg-muted/30 rounded-xl gap-1"
     >
       {Object.entries(TASK_OPTIONS).map(([key, { label, Icon, bgClass }]) => (
         <ToggleGroupItem
           key={key}
           value={key}
           className={cn(
-            'flex items-center gap-2 px-3 py-2 rounded-md transition-colors focus-visible:ring-2 focus-visible:ring-offset-2',
-            value === key ? `${bgClass} text-white` : 'bg-muted text-muted-foreground',
+            'flex-1 flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg transition-all duration-300 focus-visible:ring-2 focus-visible:ring-offset-2 cursor-pointer',
+            value === key ? `${bgClass} text-white shadow-sm font-bold` : 'text-muted-foreground hover:bg-white/40 hover:text-foreground dark:hover:bg-white/5',
           )}
         >
-          <Icon className="size-4" />
+          <Icon className="size-3.5 shrink-0" />
           <span>{label}</span>
         </ToggleGroupItem>
       ))}

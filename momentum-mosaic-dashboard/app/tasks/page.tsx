@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
   Plus, Check, Trash2, Clock, Edit2, Brain, Zap, Dumbbell,
-  ListTodo, History, Layers, CheckCircle2, Play,
+  ListTodo, History, Layers, CheckCircle2, Play, Lock,
 } from "lucide-react"
 import { CreateTaskDialog } from "@/components/create-task-dialog"
 import { EditTaskDialog } from "@/components/edit-task-dialog"
@@ -39,7 +39,7 @@ const TASK_TYPE_META: Record<
   }
 > = {
   DEEP: {
-    label: "Deep Work",
+    label: "Deep Focus",
     icon: Brain,
     railClassName: "border-indigo-200 bg-indigo-50/70 dark:border-indigo-900/60 dark:bg-indigo-950/20",
     markerClassName: "bg-indigo-500",
@@ -47,7 +47,7 @@ const TASK_TYPE_META: Record<
     borderActive: "border-indigo-400/60",
   },
   SHALLOW: {
-    label: "Shallow Work",
+    label: "Light Focus",
     icon: Zap,
     railClassName: "border-sky-200 bg-sky-50/70 dark:border-sky-900/60 dark:bg-sky-950/20",
     markerClassName: "bg-sky-500",
@@ -272,10 +272,10 @@ export default function TasksPage() {
             <>
               {/* ── Stat row ────────────────────────────────────────────── */}
               <div className="reveal-up reveal-delay-1 mb-10 grid gap-5 sm:grid-cols-2 lg:max-w-3xl">
-                <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl">
+                <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl premium-card-static rounded-2xl">
                   <CardContent className="flex items-center justify-between p-6">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Active Tasks</p>
+                      <p className="text-sm font-bold text-muted-foreground">Active Tasks</p>
                       <div className="text-2xl font-bold">{activeTasks.length}</div>
                     </div>
                     <div className="rounded-full bg-primary/10 p-3 text-primary">
@@ -284,10 +284,10 @@ export default function TasksPage() {
                   </CardContent>
                 </Card>
 
-                <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl">
+                <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl premium-card-static rounded-2xl">
                   <CardContent className="flex items-center justify-between p-6">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Completed</p>
+                      <p className="text-sm font-bold text-muted-foreground">Completed</p>
                       <div className="text-2xl font-bold">{completedTasks.length}</div>
                     </div>
                     <div className="rounded-full bg-green-500/10 p-3 text-green-500">
@@ -405,84 +405,87 @@ export default function TasksPage() {
                               {group.tasks.map((task, taskIndex) => (
                                 <div
                                   key={task.id}
-                                  className={`group min-w-[260px] rounded-xl border border-white/60 bg-white/40 p-5 shadow-sm backdrop-blur-md sm:min-w-[320px] ${meta.railClassName} ${hasActiveSession ? "cursor-not-allowed opacity-50 grayscale-[20%]" : "hover-premium"}`}
-                                >
-                                  <div className="mb-4 flex items-center justify-between">
-                                    <span className={`h-2 w-8 rounded-full ${meta.markerClassName}`} />
-                                    {/* Action buttons only when no session active */}
-                                    {!hasActiveSession && (
-                                      <div className="flex gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          id={`complete-directly-task-${task.id}`}
-                                          onClick={() => handleCompleteTask(task.id)}
-                                          className="h-8 w-8 hover:bg-green-500/10 hover:text-green-500"
-                                        >
-                                          <Check className="h-3.5 w-3.5" />
-                                        </Button>
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          id={`edit-task-${task.id}`}
-                                          onClick={() => setEditingTask(task)}
-                                          className="h-8 w-8 hover:bg-background/60"
-                                        >
-                                          <Edit2 className="h-3.5 w-3.5" />
-                                        </Button>
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          id={`delete-task-${task.id}`}
-                                          onClick={() => handleDeleteTask(task.id)}
-                                          className="h-8 w-8 hover:bg-destructive/10 hover:text-destructive"
-                                        >
-                                          <Trash2 className="h-3.5 w-3.5" />
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <div className="space-y-4">
-                                    <div>
-                                      <p className="mb-2 font-mono text-xs font-bold text-muted-foreground/60">
-                                        {String(taskIndex + 1).padStart(2, "0")}
-                                      </p>
-                                      <h3 className="line-clamp-2 min-h-[3rem] text-lg font-bold leading-tight text-primary">
-                                        {task.title}
-                                      </h3>
+                                className={`group min-w-[260px] rounded-xl border border-white/60 bg-white/40 p-5 shadow-sm backdrop-blur-md sm:min-w-[320px] ${meta.railClassName} ${hasActiveSession ? "opacity-45" : "hover-premium"}`}
+                              >
+                                <div className="mb-4 flex items-center justify-between">
+                                  <span className={`h-2 w-8 rounded-full ${meta.markerClassName}`} />
+                                  {/* Action buttons only when no session active */}
+                                  {!hasActiveSession && (
+                                    <div className="flex gap-1.5">
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        id={`complete-directly-task-${task.id}`}
+                                        onClick={() => handleCompleteTask(task.id)}
+                                        className="h-7 w-7 rounded-full border border-border bg-background/50 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20 shadow-xs transition-all duration-300 cursor-pointer"
+                                        title="Complete directly"
+                                      >
+                                        <Check className="h-3.5 w-3.5" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        id={`edit-task-${task.id}`}
+                                        onClick={() => setEditingTask(task)}
+                                        className="h-7 w-7 rounded-full border border-border bg-background/50 text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-xs transition-all duration-300 cursor-pointer"
+                                        title="Edit task"
+                                      >
+                                        <Edit2 className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        id={`delete-task-${task.id}`}
+                                        onClick={() => handleDeleteTask(task.id)}
+                                        className="h-7 w-7 rounded-full border border-border bg-background/50 text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 shadow-xs transition-all duration-300 cursor-pointer"
+                                        title="Delete task"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
                                     </div>
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                      <Clock className="h-4 w-4" />
-                                      <span>{task.durationMinutes} minutes</span>
-                                    </div>
-
-                                    <Button
-                                      id={`start-task-${task.id}`}
-                                      onClick={() => handleStartTask(task.id)}
-                                      className="w-full gap-2"
-                                      variant="secondary"
-                                      disabled={hasActiveSession || startingTaskId === task.id}
-                                    >
-                                      {startingTaskId === task.id ? (
-                                        <>
-                                          <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                          Starting…
-                                        </>
-                                      ) : hasActiveSession ? (
-                                        <>
-                                          <Check className="h-4 w-4" />
-                                          Session Active
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Play className="h-4 w-4" />
-                                          Start Focus
-                                        </>
-                                      )}
-                                    </Button>
-                                  </div>
+                                  )}
                                 </div>
+
+                                <div className="space-y-4">
+                                  <div>
+                                    <p className="mb-2 font-mono text-xs font-bold text-muted-foreground/60">
+                                      {String(taskIndex + 1).padStart(2, "0")}
+                                    </p>
+                                    <h3 className="line-clamp-2 min-h-[3rem] text-lg font-bold leading-tight text-primary">
+                                      {task.title}
+                                    </h3>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                                    <Clock className="h-3.5 w-3.5 text-muted-foreground/80" />
+                                    <span>{task.durationMinutes} minutes</span>
+                                  </div>
+
+                                  <Button
+                                    id={`start-task-${task.id}`}
+                                    onClick={() => handleStartTask(task.id)}
+                                    className="w-full gap-2 cursor-pointer font-semibold"
+                                    variant="secondary"
+                                    disabled={hasActiveSession || startingTaskId === task.id}
+                                  >
+                                    {startingTaskId === task.id ? (
+                                      <>
+                                        <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                        Starting…
+                                      </>
+                                    ) : hasActiveSession ? (
+                                      <>
+                                        <Lock className="h-3.5 w-3.5 opacity-80" />
+                                        Focus Locked
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Play className="h-3.5 w-3.5" />
+                                        Start Focus
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
+                              </div>
                               ))}
                             </div>
                           </section>
@@ -508,7 +511,7 @@ export default function TasksPage() {
                       {completedTasks.map((task) => (
                         <Card
                           key={task.id}
-                          className="border border-white/60 bg-gradient-to-br from-card/40 to-muted/20 shadow-sm backdrop-blur-xl rounded-2xl opacity-80 hover-premium hover:opacity-100"
+                          className="border border-white/60 bg-gradient-to-br from-card/40 to-muted/20 shadow-sm backdrop-blur-xl rounded-2xl opacity-80 premium-card-static hover:opacity-100"
                         >
                           <CardHeader className="pb-3 border-b border-white/30 bg-white/20">
                             <div className="flex items-start justify-between">
