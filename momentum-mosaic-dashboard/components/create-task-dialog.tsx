@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { TaskTypeSelector, TaskType } from "@/components/task-type-selector"
 import { useToast } from "@/hooks/use-toast"
 
 interface CreateTaskDialogProps {
@@ -106,22 +106,10 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
 
           <div className="space-y-2">
             <Label htmlFor="taskType">Task Type</Label>
-            <Select
-              value={formData.taskType}
-              onValueChange={(value) => setFormData({ ...formData, taskType: value as any })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select task type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="DEEP">Deep Work</SelectItem>
-                <SelectItem value="SHALLOW">Shallow Work</SelectItem>
-                <SelectItem value="FITNESS">Fitness</SelectItem>
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Deep: Focused work | Shallow: Routine tasks | Fitness: Exercise activities
-            </p>
+            <TaskTypeSelector
+              value={formData.taskType as TaskType}
+              onValueChange={(value) => setFormData({ ...formData, taskType: value })}
+            />
           </div>
 
           <div className="space-y-2">
