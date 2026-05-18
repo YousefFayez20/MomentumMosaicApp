@@ -449,10 +449,21 @@
   
   .hover-premium:hover {
     transform: translateY(-2px);
-    border-color: color-mix(in oklch, var(--border), var(--primary) 20%);
+    border-color: color-mix(in oklch, var(--border), var(--primary) 22%);
     box-shadow: 
       0 12px 30px -8px color-mix(in oklch, var(--primary), transparent 85%),
       0 4px 12px -4px color-mix(in oklch, var(--foreground), transparent 92%);
+  }
+
+  .premium-card-static {
+    transition: border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .premium-card-static:hover {
+    border-color: color-mix(in oklch, var(--border), var(--primary) 15%);
+    box-shadow: 0 6px 18px -6px color-mix(in oklch, var(--primary), transparent 94%);
   }
 
   .breathe-opacity {
@@ -462,6 +473,15 @@
   @keyframes breathe-opacity {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.35; }
+  }
+
+  .breathe-slow {
+    animation: breathe-slow 6s ease-in-out infinite;
+  }
+
+  @keyframes breathe-slow {
+    0%, 100% { opacity: 0.35; transform: scale(0.95); }
+    50% { opacity: 1; transform: scale(1.08); }
   }
 
   @keyframes particle-drift-left {

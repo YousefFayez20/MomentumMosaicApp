@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   CheckCircle2, Clock, Activity, Mountain, ArrowRight,
-  Brain, Zap, Dumbbell, Flame, Target, Check, Play,
+  Brain, Zap, Dumbbell, Flame, Target, Check, Play, Lock,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { BrandedLoader } from "@/components/branded-loader"
@@ -29,14 +29,14 @@ const TASK_TYPE_META: Record<
   { label: string; icon: typeof Brain; badgeClassName: string; railClassName: string; markerClassName: string }
 > = {
   DEEP: {
-    label: "Deep Work",
+    label: "Deep Focus",
     icon: Brain,
     badgeClassName: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-300",
     railClassName: "border-indigo-200 bg-indigo-50/70 dark:border-indigo-900/60 dark:bg-indigo-950/20",
     markerClassName: "bg-indigo-500",
   },
   SHALLOW: {
-    label: "Shallow Work",
+    label: "Light Focus",
     icon: Zap,
     badgeClassName: "bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300",
     railClassName: "border-sky-200 bg-sky-50/70 dark:border-sky-900/60 dark:bg-sky-950/20",
@@ -61,6 +61,28 @@ function formatMinutes(totalMinutes: number) {
   return `${hours}h ${minutes}m`
 }
 
+function formatCompletedTime(dateStr: string) {
+  try {
+    const date = new Date(dateStr)
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  } catch (e) {
+    return ""
+  }
+}
+
+function getReadinessHint(taskType: string) {
+  switch (taskType) {
+    case "DEEP_WORK":
+      return "Ideal for deep, uninterrupted mental immersion."
+    case "SHALLOW_WORK":
+      return "Excellent for maintaining administrative and operational momentum."
+    case "FITNESS":
+      return "Best tackled for bodily recovery and physical focus."
+    default:
+      return "Ready when you are to lock in focus."
+  }
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -78,6 +100,7 @@ export default function DashboardPage() {
   const [abandoningTaskId, setAbandoningTaskId] = useState<number | null>(null)
   const [workoutSubmitting, setWorkoutSubmitting] = useState(false)
   const [celebratingStats, setCelebratingStats] = useState<{ task: TaskResponse; countToday: number } | null>(null)
+  const [historyExpanded, setHistoryExpanded] = useState(false)
 
   // ─── Data fetching ───────────────────────────────────────────────────────────
 
@@ -133,12 +156,12 @@ export default function DashboardPage() {
     if (!user?.userId) return
     try {
       setCompletingTaskId(taskId)
-      
+
       const taskBefore = dashboard?.taskSummary.activeTasks.find(t => t.id === taskId)
       const wasInProgress = taskBefore?.status === "IN_PROGRESS"
-      
+
       const task = await apiClient.completeTask(taskId)
-      
+
       const countToday = (dashboard?.taskSummary.completedTasks || []).filter(t => t.taskType === task.taskType && isToday(t.completedAt)).length + 1
       const typeLabel = TASK_TYPE_META[task.taskType].label
 
@@ -288,314 +311,431 @@ export default function DashboardPage() {
 
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
 
-          {/* ── Hero / Progress strip ─────────────────────────────────── */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }} className="command-surface mb-10 overflow-hidden rounded-2xl p-6 sm:p-8">
-            <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-              <div>
-                <p className="mb-3 tracking-widest text-xs font-bold uppercase text-muted-foreground/80">Daily discipline</p>
-                <h2 className="text-3xl font-extrabold text-primary tracking-tight sm:text-5xl">Today's Momentum</h2>
-                <p className="mt-2 text-muted-foreground">
-                  Focus on what matters. Complete what you've committed to.
-                </p>
-                <div className="mt-6 flex flex-wrap gap-2 text-xs font-semibold text-muted-foreground">
-                  <span className="rounded-full border border-primary/10 bg-white/60 px-4 py-1.5 shadow-sm backdrop-blur-sm">Structured execution</span>
-                  <span className="rounded-full border border-primary/10 bg-white/60 px-4 py-1.5 shadow-sm backdrop-blur-sm">One active session at a time</span>
-                </div>
-              </div>
-              <div className="w-full max-w-sm rounded-xl border border-white/50 bg-white/40 p-5 shadow-sm backdrop-blur-md md:w-80">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-medium uppercase text-muted-foreground">
-                    {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
-                  </span>
-                  <span className="text-sm font-semibold text-primary">{progressPercent}%</span>
-                </div>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-700"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-                <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-                  <span>{allActiveTasks.length} open</span>
-                  <span>{completedTodayCount} done</span>
-                  <span>{formatMinutes(plannedMinutes)} left</span>
-                </div>
-              </div>
+          {/* Shallow Top Momentum Overview Surface */}
+          <div className="mb-8 bg-white/50 dark:bg-muted/[0.03] border border-white/60 dark:border-white/5 backdrop-blur-md rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden shadow-xs">
+            <div>
+              <span className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">Today's Momentum</span>
+              <h1 className="text-base sm:text-lg font-black tracking-tight text-primary mt-0.5">
+                {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+              </h1>
+              <p className="text-[10.5px] font-semibold text-muted-foreground/50 mt-1 uppercase tracking-wider">
+                Structured execution • One active session at a time
+              </p>
             </div>
-          </motion.div>
+            
+            <div className="flex flex-col sm:items-end gap-1 shrink-0 text-left sm:text-right">
+              <div className="text-xs font-bold text-muted-foreground/75 uppercase tracking-wide">
+                {completedTodayCount} completed <span className="text-muted-foreground/30">•</span> {allActiveTasks.length} remaining <span className="text-muted-foreground/30">•</span> {formatMinutes(plannedMinutes)} planned
+              </div>
+              <span className="text-[10px] font-bold text-indigo-500/80 dark:text-indigo-400/80">
+                Focus Ratio: {progressPercent}%
+              </span>
+            </div>
 
-          {/* ── Stat cards ───────────────────────────────────────────────── */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.1 }} className="mb-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl">
-              <CardHeader className="flex flex-row items-center justify-between pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Momentum Score</CardTitle>
-                <Zap className="h-5 w-5 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{dashboard.momentumScore}</div>
-                <p className="mt-1 text-xs font-medium text-muted-foreground">Your composite discipline signal</p>
-              </CardContent>
-            </Card>
+            {/* Thin Atmospheric Environmental Progress Track */}
+            <div className="h-1 w-full bg-primary/5 dark:bg-white/5 absolute bottom-0 left-0">
+              <div 
+                className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-700 ease-out" 
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
 
-            <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl">
-              <CardHeader className="flex flex-row items-center justify-between pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Workout Streak</CardTitle>
-                <Flame className="h-5 w-5 text-primary" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{fitnessSummary.workoutStreak}</div>
-                <p className="mt-1 text-xs font-medium text-muted-foreground">
-                  {fitnessSummary.workoutStreak === 1 ? "day" : "days"} of consistency
-                </p>
-              </CardContent>
-            </Card>
+          {/* ── Main Workspace Grid with Focus-State Transformation ── */}
+          <div className={`relative transition-all duration-1000 ease-in-out ${hasActiveSession ? "bg-black/[0.02] dark:bg-black/20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 rounded-[2.5rem]" : ""}`}>
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }} className="grid gap-10 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)] lg:items-start relative z-10">
 
-            <Card className="border border-emerald-500/20 bg-gradient-to-br from-emerald-50/40 to-white/40 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl sm:col-span-2 lg:col-span-1">
-              <CardHeader className="flex flex-row items-center justify-between pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Today's Progress</CardTitle>
-                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{completedTodayCount} of {totalTaskCount}</div>
-                <p className="mt-1 text-xs font-medium text-muted-foreground">tasks completed today</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* ── Main grid ────────────────────────────────────────────────── */}
-          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }} className="grid gap-10 lg:grid-cols-[minmax(0,1.6fr)_minmax(320px,1fr)] lg:items-start">
-
-            {/* Today's task sequence */}
-            <Card className="order-2 overflow-hidden border-white/60 bg-card/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl rounded-2xl lg:order-1">
-              <CardHeader className="bg-white/40 border-b border-white/40 pb-5">
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-primary" />
-                  Today's Sequence
-                </CardTitle>
-                <CardDescription>
-                  Move left to right through the commitments that still need attention.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-8 pt-6">
-
-                {/* ── IN_PROGRESS task — shown prominently at top ── */}
-                {inProgressTask && (() => {
-                  const meta = TASK_TYPE_META[inProgressTask.taskType]
-                  const InProgressIcon = meta.icon
-                  return (
-                    <section className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Badge className={meta.badgeClassName}>
-                          <InProgressIcon className="mr-1 h-3.5 w-3.5" />
-                          {meta.label}
-                        </Badge>
-                        <span className="flex items-center gap-1.5 text-xs font-bold tracking-wide uppercase text-indigo-500 dark:text-indigo-400">
-                          <span className="relative flex h-2 w-2">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
-                            <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500 breathe-opacity" />
-                          </span>
-                          In Progress
-                        </span>
-                      </div>
-                      <div className={`rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50/80 to-white/60 p-6 shadow-lg shadow-indigo-500/5 ${meta.railClassName}`}>
-                        <p className="mb-4 text-xl font-bold leading-tight">{inProgressTask.title}</p>
-                        <TaskTimer
-                          startedAt={inProgressTask.startedAt}
-                          durationMinutes={inProgressTask.durationMinutes}
-                        />
-                        <p className="mt-3 text-center text-xs text-muted-foreground/60">
-                          Focus Mode is holding this session. Complete or abandon from the focus card.
-                        </p>
-                      </div>
-                    </section>
-                  )
-                })()}
-
-                {/* ── PLANNED task groups ── */}
-                {groupedPlanned.length === 0 && !inProgressTask ? (
-                  <div className="rounded-lg border border-dashed bg-muted/20 p-8 text-center">
-                    <p className="text-lg font-semibold">No active tasks right now</p>
+              {/* Workspace Execution Column Container (Left Panel Surface) */}
+              <div className={`order-2 space-y-8 lg:order-1 bg-white/40 dark:bg-muted/[0.03] backdrop-blur-xl border border-white/60 dark:border-white/5 rounded-3xl p-6 sm:p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] transition-all duration-700`}>
+                
+                {/* ── EMPTY STATE ── */}
+                {allActiveTasks.length === 0 ? (
+                  <div className="rounded-3xl border border-dashed border-muted/30 bg-muted/5 p-12 text-center">
+                    <p className="text-lg font-semibold">No active focus blocks today</p>
                     <p className="mt-2 text-sm text-muted-foreground">
-                      You're caught up. Head to Tasks to plan more.
+                      Your workspace is clear. Go to Tasks to plan your day.
                     </p>
-                    <Button variant="outline" className="mt-4 gap-2" onClick={() => router.push("/tasks")}>
-                      Open Tasks <ArrowRight className="h-4 w-4" />
+                    <Button variant="outline" className="mt-6 gap-2 cursor-pointer rounded-full" onClick={() => router.push("/tasks")}>
+                      Plan Your Day <ArrowRight className="h-4 w-4" />
                     </Button>
                   </div>
                 ) : (
-                  groupedPlanned.map((group, groupIndex) => {
-                    const meta = TASK_TYPE_META[group.taskType]
-                    const GroupIcon = meta.icon
-                    return (
-                      <section
-                        key={group.taskType}
-                        className={`space-y-3 transition-opacity duration-300 ${hasActiveSession ? "opacity-50" : ""}`}
-                        style={{ animationDelay: `${groupIndex * 90}ms` }}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <Badge className={meta.badgeClassName}>
-                              <GroupIcon className="mr-1 h-3.5 w-3.5" />
-                              {meta.label}
-                            </Badge>
-                          </div>
-                          <span className="text-xs font-bold tracking-wider uppercase text-muted-foreground/70">
-                            {group.tasks.length} {group.tasks.length === 1 ? "task" : "tasks"}
-                          </span>
-                        </div>
+                  <div className="relative pl-8 space-y-8">
+                    {/* The Solid Premium Timeline Spine */}
+                    <div className={`absolute left-[13.5px] top-8 bottom-6 w-[1px] border-l border-solid transition-opacity duration-700 ${hasActiveSession ? "opacity-20 border-muted/50" : "opacity-100 border-muted/30 dark:border-muted/20"}`} />
 
-                        <div className="commitment-rail flex gap-4 overflow-x-auto pb-4">
-                          {group.tasks.map((task, taskIndex) => (
-                            <div
-                              key={task.id}
-                              className={`min-w-[260px] rounded-xl border border-white/60 bg-white/40 p-5 shadow-sm backdrop-blur-sm sm:min-w-[300px] ${meta.railClassName} ${hasActiveSession ? "cursor-not-allowed opacity-50 grayscale-[20%]" : "hover-premium"}`}
-                            >
-                              <div className="mb-4 flex items-center justify-between">
-                                <span className={`h-2 w-8 rounded-full ${meta.markerClassName}`} />
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-xs text-muted-foreground">
-                                    {String(taskIndex + 1).padStart(2, "0")}
-                                  </span>
-                                  {!hasActiveSession && (
-                                    <div className="opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        id={`dashboard-complete-directly-task-${task.id}`}
-                                        onClick={() => handleCompleteTask(task.id)}
-                                        className="h-8 w-8 hover:bg-green-500/10 hover:text-green-500"
-                                      >
-                                        <Check className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </div>
-                                  )}
+                    {/* Labeled Section Divider: Active Commitment */}
+                    <div className="border-b border-border/5 pb-2.5">
+                      <h4 className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground/50">
+                        Active Commitment
+                      </h4>
+                    </div>
+
+                    {/* ── NOW: ACTIVE COMMITMENT (Absolute Hero Centerpiece) ── */}
+                    {(() => {
+                      const task = inProgressTask || plannedTasks[0]
+                      if (!task) return null
+                      
+                      const meta = TASK_TYPE_META[task.taskType]
+                      const TaskIcon = meta.icon
+                      const isCurrentFocus = task.status === "IN_PROGRESS"
+                      const readinessHint = getReadinessHint(task.taskType)
+                      
+                      return (
+                        <div className="relative">
+                          {/* NOW Stepper Outlined Glowing node (slow breathe opacity, no pulsing alert) */}
+                          <div className="absolute left-[-21px] top-4.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background border border-indigo-500 dark:border-indigo-400 shadow-sm z-10">
+                            <span className="relative flex h-1.5 w-1.5 rounded-full bg-indigo-500 breathe-slow" />
+                          </div>
+
+                          <div className={`relative rounded-xl border border-white/70 dark:border-white/10 bg-gradient-to-br from-card to-muted/20 p-4 sm:p-4.5 shadow-sm premium-card-static`}>
+                            
+                            {/* Header section with step indicator and minor quick actions */}
+                            <div className="flex items-center justify-between border-b border-border/10 pb-2.5 mb-3">
+                              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                                {isCurrentFocus ? "Current Focus" : `Next Commitment (1 of ${allActiveTasks.length})`}
+                              </span>
+                              
+                              {!isCurrentFocus && (
+                                <div className="flex items-center">
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    id={`dashboard-complete-directly-task-${task.id}`}
+                                    onClick={() => handleCompleteTask(task.id)}
+                                    className="h-7 w-7 rounded-full border border-border/40 bg-background/20 text-muted-foreground/60 hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20 transition-all cursor-pointer"
+                                    title="Complete directly"
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                  </Button>
                                 </div>
-                              </div>
-                              <div className="min-w-0 space-y-3">
-                                <p className="line-clamp-2 min-h-10 font-semibold leading-tight">{task.title}</p>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <Clock className="h-4 w-4" />
-                                  <span>{task.durationMinutes} minutes</span>
-                                </div>
-                              </div>
-                              <Button
-                                className="mt-4 w-full gap-2"
-                                variant="secondary"
-                                id={`dashboard-start-task-${task.id}`}
-                                onClick={() => handleStartTask(task.id)}
-                                disabled={hasActiveSession || startingTaskId === task.id}
-                              >
-                                {startingTaskId === task.id ? (
-                                  <>
-                                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                    Starting…
-                                  </>
-                                ) : hasActiveSession ? (
-                                  <>
-                                    <Check className="h-4 w-4" />
-                                    Session Active
-                                  </>
-                                ) : (
-                                  <>
-                                    <Play className="h-4 w-4" />
-                                    Start Focus
-                                  </>
-                                )}
-                              </Button>
+                              )}
                             </div>
-                          ))}
-                        </div>
-                      </section>
-                    )
-                  })
-                )}
-              </CardContent>
-            </Card>
 
-            {/* Sidebar */}
-            <div className="order-1 space-y-6 lg:order-2">
+                            {/* Task details */}
+                            <div className="space-y-3.5">
+                              <div className="flex items-center gap-2">
+                                <Badge className={`px-2 py-0.5 border ${meta.badgeClassName} shadow-none`}>
+                                  <TaskIcon className="mr-1.5 h-3 w-3" />
+                                  {meta.label}
+                                </Badge>
+                                {isCurrentFocus && (
+                                  <span className="flex items-center gap-1.5 text-xs font-bold tracking-wide uppercase text-indigo-500 dark:text-indigo-400">
+                                    <span className="relative flex h-2 w-2">
+                                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
+                                      <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500 breathe-opacity" />
+                                    </span>
+                                    Live Session
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <h3 className="text-xl sm:text-2xl font-black tracking-tight text-primary leading-tight">
+                                {task.title}
+                              </h3>
 
-              {/* Workout card */}
-              <Card className={`border border-white/60 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl rounded-2xl overflow-hidden ${fitnessSummary.didWorkoutToday ? "bg-gradient-to-br from-green-50/60 to-white/40 hover-premium" : "bg-gradient-to-br from-card/80 to-muted/30 hover-premium"}`}>
-                <CardContent className="p-7">
-                  <div className="flex items-center gap-5">
-                    <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full ${fitnessSummary.didWorkoutToday ? "bg-green-500 text-white shadow-lg shadow-green-500/25" : "bg-muted text-muted-foreground"}`}>
-                      {fitnessSummary.didWorkoutToday ? <Activity className="h-8 w-8" /> : <Mountain className="h-8 w-8" />}
-                    </div>
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <h3 className="text-xl font-bold leading-none">
-                        {fitnessSummary.didWorkoutToday ? "Workout Complete" : "Workout Still Open"}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {fitnessSummary.didWorkoutToday
-                          ? "You've already checked the fitness box for today."
-                          : "Log today's workout so it doesn't slip past you."}
-                      </p>
-                      <div className="pt-2">
-                        {fitnessSummary.didWorkoutToday ? (
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Badge className="bg-green-600 text-white hover:bg-green-600">
-                              <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                              Logged today
-                            </Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleWorkoutToggle(false)}
-                              disabled={workoutSubmitting}
-                            >
-                              {workoutSubmitting ? "Updating…" : "Undo"}
-                            </Button>
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-muted-foreground">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-4 w-4 text-muted-foreground/70" />
+                                  <span>{task.durationMinutes} minutes planned</span>
+                                </div>
+                                <span className="hidden sm:inline text-muted-foreground/30">•</span>
+                                <span className="text-[10.5px] font-medium text-indigo-500/90 dark:text-indigo-400/90 italic">
+                                  {readinessHint}
+                                </span>
+                              </div>
+
+                              {/* Core Action Button - Constrained Elevated Launch Pill */}
+                              {isCurrentFocus ? (
+                                <div className="pt-1.5">
+                                  <TaskTimer
+                                    startedAt={task.startedAt}
+                                    durationMinutes={task.durationMinutes}
+                                  />
+                                  <p className="mt-3 text-center text-xs text-muted-foreground/60">
+                                    Focus Mode is active. Complete or abandon from the full screen overlay.
+                                  </p>
+                                </div>
+                              ) : (
+                                <Button
+                                  className="mt-1 w-fit max-w-[60%] gap-2.5 cursor-pointer font-bold py-3 px-5 text-xs sm:text-[13px] rounded-full justify-start mr-auto bg-primary text-primary-foreground border border-transparent shadow-xs hover:bg-primary/95 hover:shadow-md hover:border-primary/20 transition-all duration-300"
+                                  id={`dashboard-start-task-${task.id}`}
+                                  onClick={() => handleStartTask(task.id)}
+                                  disabled={hasActiveSession || startingTaskId === task.id}
+                                >
+                                  {startingTaskId === task.id ? (
+                                    <>
+                                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                      Starting Session…
+                                    </>
+                                  ) : hasActiveSession ? (
+                                    <>
+                                      <Lock className="h-3 w-3 opacity-80" />
+                                      Locked
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Play className="h-2.5 w-2.5 fill-current" />
+                                      Launch Session
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                        ) : (
-                          <Button
-                            className="gap-2"
-                            onClick={() => handleWorkoutToggle(true)}
-                            disabled={workoutSubmitting}
-                          >
-                            <Activity className="h-4 w-4" />
-                            {workoutSubmitting ? "Logging…" : "Log Workout"}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                        </div>
+                      )
+                    })()}
 
-              {/* Today at a Glance */}
-              <Card className="border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl">
-                <CardHeader className="bg-white/40 border-b border-white/40 pb-5">
-                  <CardTitle>Today at a Glance</CardTitle>
-                  <CardDescription>A quick read on what remains before the day feels complete.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 pt-5">
-                  <div className="rounded-xl border border-white/60 bg-white/40 p-4 shadow-sm">
-                    <div className="text-xs font-bold tracking-wider uppercase text-muted-foreground/70">Tasks still open</div>
-                    <div className="mt-1 text-2xl font-extrabold text-primary">{allActiveTasks.length}</div>
+                    {/* ── NEXT: STEPPED UPCOMING SEQUENCE WITH ADAPTIVE COMPRESSION (Middle Queue) ── */}
+                    {(() => {
+                      const upcomingQueue = inProgressTask ? plannedTasks : plannedTasks.slice(1)
+                      if (upcomingQueue.length === 0) return null
+                      
+                      const upcomingMinutes = upcomingQueue.reduce((s, t) => s + t.durationMinutes, 0)
+                      
+                      // Adaptive compression logic: show max 2 items, collapse the rest.
+                      const maxVisible = 2
+                      const visibleTasks = upcomingQueue.slice(0, maxVisible)
+                      const collapsedCount = upcomingQueue.length - maxVisible
+                      
+                      return (
+                        <div className={`space-y-4 pt-6 border-t border-border/5 transition-all duration-700 ease-in-out ${hasActiveSession ? "opacity-20 pointer-events-none blur-[0.2px]" : "opacity-100"}`}>
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                              Next Flow
+                            </h4>
+                            <span className="text-[9.5px] font-mono text-muted-foreground/40">
+                              {upcomingQueue.length} remaining • {upcomingMinutes}m
+                            </span>
+                          </div>
+                          
+                          <div className="space-y-3 pt-1">
+                            {visibleTasks.map((task, index) => {
+                              const meta = TASK_TYPE_META[task.taskType]
+                              const TaskIcon = meta.icon
+                              const stepNum = inProgressTask ? index + 1 : index + 2
+                              const isNextUp = index === 0
+                              
+                              return (
+                                <div 
+                                  key={task.id} 
+                                  className={`relative flex items-center justify-between gap-4 p-3 rounded-xl border transition-all duration-300 ${
+                                    isNextUp 
+                                      ? "border-white/50 dark:border-white/10 bg-white/30 dark:bg-muted/15 opacity-95 hover:border-border/40" 
+                                      : "border-white/20 dark:border-white/5 bg-white/10 dark:bg-muted/5 opacity-65 hover:opacity-85 hover:border-border/30"
+                                  } group`}
+                                >
+                                  {/* Stepper Node Bullet - next up is indigo styled to inherit focus momentum */}
+                                  <div className={`absolute -left-[20.5px] top-[16.5px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background border shadow-xs z-10 ${
+                                    isNextUp ? "border-indigo-400 dark:border-indigo-500" : "border-muted-foreground/30"
+                                  }`}>
+                                    <span className={`text-[7.5px] font-black ${isNextUp ? "text-indigo-500" : "text-muted-foreground/80"}`}>{stepNum}</span>
+                                  </div>
+                                  
+                                  {/* Task details */}
+                                  <div className="min-w-0 flex-1 pl-1 space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <p className={`font-bold leading-tight text-primary truncate ${isNextUp ? "text-sm" : "text-[12.5px]"}`}>
+                                        {task.title}
+                                      </p>
+                                      {isNextUp && (
+                                        <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-wider shrink-0">
+                                          Next Up
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[10.5px] font-bold text-muted-foreground/80">
+                                      <Badge className={`px-1.5 py-0 text-[8px] border ${meta.badgeClassName} shadow-none`}>
+                                        <TaskIcon className="mr-1 h-2.5 w-2.5" />
+                                        {meta.label}
+                                      </Badge>
+                                      <span>•</span>
+                                      <span>{task.durationMinutes}m</span>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Inline actions */}
+                                  <div className="flex items-center gap-1.5 opacity-60 sm:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                    {!hasActiveSession && (
+                                      <>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          onClick={() => handleStartTask(task.id)}
+                                          className="h-6 w-6 rounded-full border border-border/40 bg-background/30 text-muted-foreground/75 hover:bg-primary/5 hover:text-primary transition-all cursor-pointer"
+                                          title="Start Focus"
+                                        >
+                                          <Play className="h-2.5 w-2.5 fill-current" />
+                                        </Button>
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          onClick={() => handleCompleteTask(task.id)}
+                                          className="h-6 w-6 rounded-full border border-border/40 bg-background/30 text-muted-foreground/75 hover:bg-emerald-500/10 hover:text-emerald-500 transition-all cursor-pointer"
+                                          title="Complete directly"
+                                        >
+                                          <Check className="h-2.5 w-2.5" />
+                                        </Button>
+                                      </>
+                                    )}
+                                    {hasActiveSession && (
+                                      <Lock className="h-3 w-3 text-muted-foreground/40" />
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                            
+                            {/* Dynamic indicator row for collapsed tasks */}
+                            {collapsedCount > 0 && (
+                              <div className="relative flex items-center justify-between p-2 rounded-lg bg-muted/5 opacity-55 border border-dashed border-border/10">
+                                {/* Connector spine track dot */}
+                                <div className="absolute -left-[20.5px] top-[12px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background border border-dashed border-muted-foreground/20 shadow-none z-10">
+                                  <span className="text-[6.5px] font-bold text-muted-foreground/40">+</span>
+                                </div>
+                                <span className="pl-1.5 text-[10.5px] font-medium text-muted-foreground/70">
+                                  + {collapsedCount} later {collapsedCount === 1 ? "commitment" : "commitments"} today
+                                </span>
+                                <span className="text-[10px] font-mono text-muted-foreground/40 mr-1">
+                                  queued
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })()}
+
+                    {/* ── PAST: TRANSLUCENT COMPLETED MOMENTUM PILLS (Bottom Footer) ── */}
+                    {completedToday.length > 0 && (
+                      <div className={`mt-10 pt-8 border-t border-border/5 space-y-4 transition-all duration-700 ease-in-out ${hasActiveSession ? "opacity-15 pointer-events-none" : "opacity-100"}`}>
+                        <div className="relative space-y-3">
+                          {/* PAST Stepper timeline node: subtle success check circle */}
+                          <div className="absolute left-[-21px] top-[4px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500/50 z-10 border border-emerald-500/20 shadow-none">
+                            <Check className="h-2 w-2 stroke-[2.5]" />
+                          </div>
+
+                          <div className="flex items-center justify-between pl-1">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                              Momentum History
+                            </span>
+                            <span className="text-[9.5px] font-mono text-emerald-600/60 dark:text-emerald-400/50">
+                              {completedTodayCount} done today
+                            </span>
+                          </div>
+
+                          {/* Translucent glass completed task pills */}
+                          <div className="flex flex-wrap gap-1.5 pt-1 pl-1 opacity-65 hover:opacity-85 transition-opacity duration-300">
+                            {completedToday.map((task) => {
+                              const meta = TASK_TYPE_META[task.taskType]
+                              const TaskIcon = meta.icon
+                              const completedMin = task.actualMinutes ?? task.durationMinutes
+                              const timeStr = formatCompletedTime(task.completedAt ?? "")
+                              
+                              return (
+                                <div 
+                                  key={task.id} 
+                                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/10 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.01] backdrop-blur-xs text-[10.5px]"
+                                >
+                                  <div className="flex h-3 w-3 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600/70 dark:text-emerald-400/70">
+                                    <Check className="h-2 w-2 stroke-[2]" />
+                                  </div>
+                                  <span className="font-medium text-muted-foreground/80 line-through truncate max-w-[110px] sm:max-w-[180px]">
+                                    {task.title}
+                                  </span>
+                                  <span className="text-[9px] font-mono text-emerald-600/60 dark:text-emerald-400/50 shrink-0">
+                                    ({completedMin}m {timeStr && `at ${timeStr}`})
+                                  </span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="rounded-xl border border-white/60 bg-white/40 p-4 shadow-sm">
-                    <div className="text-xs font-bold tracking-wider uppercase text-muted-foreground/70">Time still planned</div>
-                    <div className="mt-1 text-2xl font-extrabold text-primary">
+                )}
+              </div>
+
+              {/* Sidebar Panel Surface (Unified System Support) */}
+              <div className={`order-1 space-y-8 lg:order-2 bg-white/45 dark:bg-muted/[0.03] backdrop-blur-xl border border-white/60 dark:border-white/5 rounded-3xl p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-all duration-700 ease-in-out ${hasActiveSession ? "opacity-25 pointer-events-none blur-[0.6px]" : "opacity-100"}`}>
+                {/* System Insights Ambient Telemetry (Combined with Glance) */}
+                <div className="space-y-6 px-2">
+                  <h4 className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground/50 flex items-center gap-1.5 mb-2">
+                    <Zap className="h-3.5 w-3.5 text-indigo-500/60" />
+                    System Telemetry
+                  </h4>
+                
+                <div className="grid grid-cols-2 gap-x-4 gap-y-6">
+                  {/* Momentum */}
+                  <div className="space-y-1.5 border-l-[3px] border-indigo-500/30 pl-3">
+                    <div className="text-2xl font-black font-mono text-primary leading-none">{dashboard.momentumScore}</div>
+                    <div className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">Momentum</div>
+                  </div>
+                  
+                  {/* Streak */}
+                  <div className="space-y-1.5 border-l-[3px] border-indigo-500/30 pl-3">
+                    <div className="text-2xl font-black font-mono text-primary leading-none">{fitnessSummary.workoutStreak}</div>
+                    <div className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">Day Streak</div>
+                  </div>
+                  
+                  {/* Tasks Left */}
+                  <div className="space-y-1.5 border-l-[3px] border-muted/30 pl-3">
+                    <div className="text-2xl font-black font-mono text-primary leading-none">{allActiveTasks.length}</div>
+                    <div className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">Tasks Open</div>
+                  </div>
+                  
+                  {/* Time Left */}
+                  <div className="space-y-1.5 border-l-[3px] border-muted/30 pl-3">
+                    <div className="text-2xl font-black font-mono text-primary leading-none">
                       {formatMinutes(allActiveTasks.reduce((s, t) => s + t.durationMinutes, 0))}
                     </div>
+                    <div className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">Time Planned</div>
                   </div>
-                  <div className="rounded-xl border border-white/60 bg-white/40 p-4 shadow-sm">
-                    <div className="text-xs font-bold tracking-wider uppercase text-muted-foreground/70">Next best focus</div>
-                    <div className="mt-1 text-base font-bold text-primary">
-                      {inProgressTask
-                        ? `${TASK_TYPE_META[inProgressTask.taskType].label} in session`
-                        : groupedPlanned[0]
-                          ? TASK_TYPE_META[groupedPlanned[0].taskType].label
-                          : "Nothing queued"}
+                </div>
+              </div>
+
+              {/* Minimal Ambient Workout Log */}
+              <div className="mt-10 border-t border-border/5 pt-8 px-2">
+                <div className="flex items-center gap-4">
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${fitnessSummary.didWorkoutToday ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500" : "bg-muted/30 text-muted-foreground/40"}`}>
+                    {fitnessSummary.didWorkoutToday ? <CheckCircle2 className="h-4 w-4" /> : <Activity className="h-4 w-4" />}
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <h3 className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-muted-foreground/70">
+                      {fitnessSummary.didWorkoutToday ? "Workout Logged" : "Daily Workout"}
+                    </h3>
+                    <div className="pt-0.5">
+                      {fitnessSummary.didWorkoutToday ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleWorkoutToggle(false)}
+                          disabled={workoutSubmitting}
+                          className="h-5 text-[10px] px-0 hover:bg-transparent text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                        >
+                          {workoutSubmitting ? "Reverting…" : "Undo Log"}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          className="h-6 text-[10px] px-3.5 rounded-full cursor-pointer hover:bg-primary/5 hover:text-primary border-primary/20 transition-colors"
+                          onClick={() => handleWorkoutToggle(true)}
+                          disabled={workoutSubmitting}
+                        >
+                          {workoutSubmitting ? "Logging…" : "Log Completion"}
+                        </Button>
+                      )}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           </motion.div>
         </div>
-      </DashboardLayout>
-    </AuthGuard>
-  )
+      </div>
+    </DashboardLayout>
+  </AuthGuard>
+)
 }

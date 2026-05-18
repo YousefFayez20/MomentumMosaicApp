@@ -21,7 +21,7 @@ const TASK_TYPE_META: Record<
   }
 > = {
   DEEP: {
-    label: "Deep Work",
+    label: "Deep Focus",
     icon: Brain,
     ringColor: "#6366f1",
     glowColor: "rgba(99,102,241,0.35)",
@@ -30,7 +30,7 @@ const TASK_TYPE_META: Record<
     mantra: "Depth over drift.",
   },
   SHALLOW: {
-    label: "Shallow Work",
+    label: "Light Focus",
     icon: Zap,
     ringColor: "#38bdf8",
     glowColor: "rgba(56,189,248,0.3)",
@@ -93,7 +93,7 @@ function CircularProgressRing({ progress, elapsed, ringColor, glowColor, overtim
         height={SIZE}
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         className="focus-ring-breathe-glow -rotate-90"
-        style={{ filter: `drop-shadow(0 0 12px ${glowColor})` }}
+        style={{ filter: `drop-shadow(0 0 8px ${glowColor})` }}
         aria-hidden="true"
       >
         <circle
@@ -122,12 +122,12 @@ function CircularProgressRing({ progress, elapsed, ringColor, glowColor, overtim
 
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span
-          className="font-mono text-4xl font-bold tabular-nums tracking-tight sm:text-5xl"
+          className="font-mono text-4xl font-extrabold tabular-nums tracking-tighter sm:text-5xl"
           style={{ color: overtime ? "#f87171" : ringColor }}
         >
           {formatElapsed(elapsed)}
         </span>
-        <span className="mt-2 text-[0.68rem] font-semibold uppercase tracking-[0.28em] text-muted-foreground/65">
+        <span className="mt-1 text-[0.68rem] font-bold uppercase tracking-[0.28em] text-muted-foreground/60">
           {overtime ? "Overtime" : "Elapsed"}
         </span>
       </div>
@@ -336,7 +336,7 @@ export function FocusMode({
             style={{
               backgroundColor: meta.ringColor,
               color: "#fff",
-              boxShadow: `0 16px 36px ${meta.glowColor}`
+              boxShadow: `0 8px 20px -4px ${meta.glowColor}`
             }}
             onClick={onCloseCelebration}
           >
@@ -414,7 +414,7 @@ export function FocusMode({
               <Button
                 id="focus-complete-btn"
                 className="h-12 w-full gap-2 text-base font-semibold shadow-lg"
-                style={{ backgroundColor: meta.ringColor, color: "#fff", boxShadow: `0 16px 36px ${meta.glowColor}` }}
+                style={{ backgroundColor: meta.ringColor, color: "#fff", boxShadow: `0 8px 20px -4px ${meta.glowColor}` }}
                 onClick={handleComplete}
                 disabled={completing || abandoning}
               >

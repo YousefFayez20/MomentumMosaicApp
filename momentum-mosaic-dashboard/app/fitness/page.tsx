@@ -109,7 +109,7 @@ export default function FitnessPage() {
           </div>
 
           <div className="mb-10 grid gap-5 sm:grid-cols-2">
-            <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl relative overflow-hidden">
+            <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl premium-card-static rounded-2xl relative overflow-hidden">
               <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-primary/5 blur-3xl" />
               <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
                 <CardTitle className="text-sm font-bold tracking-wider uppercase text-muted-foreground/80">Current Streak</CardTitle>
@@ -121,7 +121,7 @@ export default function FitnessPage() {
               </CardContent>
             </Card>
 
-            <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl hover-premium rounded-2xl">
+            <Card className="border border-white/60 bg-gradient-to-br from-card/80 to-muted/30 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] backdrop-blur-xl premium-card-static rounded-2xl">
               <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <CardTitle className="text-sm font-bold tracking-wider uppercase text-muted-foreground/80">Today's Status</CardTitle>
                 <Calendar className="h-5 w-5 text-chart-3" />
