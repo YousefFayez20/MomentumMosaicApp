@@ -10,6 +10,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.workshop.momentummosaicapp.task.TaskType;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,4 +26,6 @@ public class TaskRequest {
 
     @Positive(message = "Duration must be positive")
     private Integer durationMinutes;
+
+    private LocalDate plannedForDate;
 }

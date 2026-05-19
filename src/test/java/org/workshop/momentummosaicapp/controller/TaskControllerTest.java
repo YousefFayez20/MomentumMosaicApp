@@ -26,6 +26,7 @@ import org.workshop.momentummosaicapp.utility.DtoMapper;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
@@ -96,7 +97,7 @@ class TaskControllerTest {
         response.setDurationMinutes(60);
         response.setCompleted(false);
 
-        when(taskService.createTask(eq("Study"), eq(1L), eq(TaskType.SHALLOW), eq(60)))
+        when(taskService.createTask(eq("Study"), eq(1L), eq(TaskType.SHALLOW), eq(60), isNull()))
                 .thenReturn(task);
         when(dtoMapper.taskToTaskResponse(task)).thenReturn(response);
 
@@ -118,7 +119,7 @@ class TaskControllerTest {
                 .andExpect(jsonPath("$.taskType").value("SHALLOW"))
                 .andExpect(jsonPath("$.completed").value(false));
 
-        verify(taskService).createTask("Study", 1L, TaskType.SHALLOW, 60);
+        verify(taskService).createTask("Study", 1L, TaskType.SHALLOW, 60, null);
     }
 
     @Test

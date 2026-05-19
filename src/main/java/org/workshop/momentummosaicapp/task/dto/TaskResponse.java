@@ -8,6 +8,7 @@ import org.workshop.momentummosaicapp.task.TaskStatus;
 import org.workshop.momentummosaicapp.task.TaskType;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -23,4 +24,5 @@ public class TaskResponse {
     private TaskStatus status;
     private Instant startedAt;
     private Integer actualMinutes;
+    private LocalDate plannedForDate;
 }

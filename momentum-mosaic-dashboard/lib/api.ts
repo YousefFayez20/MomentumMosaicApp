@@ -176,6 +176,7 @@ export class ApiClient {
       title: string
       taskType: "DEEP" | "SHALLOW" | "FITNESS"
       durationMinutes: number
+      plannedForDate?: string | null
     },
   ) {
     return this.request<TaskResponse>(`/api/tasks`, {
@@ -190,6 +191,7 @@ export class ApiClient {
       title?: string
       taskType?: "DEEP" | "SHALLOW" | "FITNESS"
       durationMinutes?: number
+      plannedForDate?: string | null
     },
   ) {
     return this.request<TaskResponse>(`/api/tasks/${taskId}`, {
@@ -242,6 +244,26 @@ export interface TaskResponse {
   status: "PLANNED" | "IN_PROGRESS" | "COMPLETED"
   startedAt: string | null
   actualMinutes: number | null
+  plannedForDate: string | null
+}
+
+export type MomentumState =
+  | "DORMANT"
+  | "RECOVERING"
+  | "BUILDING"
+  | "STEADY"
+  | "STRONG"
+  | "LOCKED_IN"
+  | "COOLING"
+
+export type MomentumTrend = "RISING" | "STABLE" | "FALLING"
+
+export interface MomentumSummary {
+  state: MomentumState
+  displayLabel: string
+  trend: MomentumTrend
+  rhythmPosition: number
+  contextMessage: string
 }
 
 export interface UserSummary {
@@ -273,7 +295,7 @@ export interface DashboardResponse {
   userSummary: UserSummary
   taskSummary: TaskSummary
   fitnessSummary: FitnessSummary
-  momentumScore: number
+  momentumSummary: MomentumSummary
 }
 
 export const apiClient = new ApiClient()
