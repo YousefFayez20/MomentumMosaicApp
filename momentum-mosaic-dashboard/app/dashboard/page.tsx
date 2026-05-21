@@ -146,74 +146,185 @@ function getReadinessHint(taskType: string) {
   }
 }
 
-function ContributorFlow({
+// ─── Contributor Row ──────────────────────────────────────────────────────────
+
+const CONTRIBUTOR_CONFIG = {
+  indigo: {
+    bar: "from-indigo-400/85 to-indigo-500/95 dark:from-indigo-400/65 dark:to-indigo-500/85",
+    bg: "bg-indigo-500/[0.06] dark:bg-indigo-500/[0.10]",
+    text: "text-indigo-600/80 dark:text-indigo-400/80",
+    iconBg: "bg-indigo-500/10 dark:bg-indigo-500/15",
+    iconText: "text-indigo-500/80 dark:text-indigo-400/80",
+    dot: "bg-indigo-500",
+  },
+  sky: {
+    bar: "from-sky-400/85 to-sky-500/95 dark:from-sky-400/65 dark:to-sky-500/85",
+    bg: "bg-sky-500/[0.06] dark:bg-sky-500/[0.10]",
+    text: "text-sky-600/80 dark:text-sky-400/80",
+    iconBg: "bg-sky-500/10 dark:bg-sky-500/15",
+    iconText: "text-sky-500/80 dark:text-sky-400/80",
+    dot: "bg-sky-500",
+  },
+  emerald: {
+    bar: "from-emerald-400/85 to-emerald-500/95 dark:from-emerald-400/65 dark:to-emerald-500/85",
+    bg: "bg-emerald-500/[0.06] dark:bg-emerald-500/[0.10]",
+    text: "text-emerald-600/80 dark:text-emerald-400/80",
+    iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
+    iconText: "text-emerald-500/80 dark:text-emerald-400/80",
+    dot: "bg-emerald-500",
+  },
+  slate: {
+    bar: "from-slate-400/75 to-indigo-400/65 dark:from-slate-400/55 dark:to-indigo-400/50",
+    bg: "bg-slate-400/[0.05] dark:bg-slate-400/[0.08]",
+    text: "text-slate-500/80 dark:text-slate-400/80",
+    iconBg: "bg-slate-400/10 dark:bg-slate-400/15",
+    iconText: "text-slate-500/70 dark:text-slate-400/70",
+    dot: "bg-slate-400",
+  },
+} as const
+
+function ContributorRow({
+  icon: Icon,
   label,
   percent,
-  weight, // 'heavy' | 'medium' | 'light'
-  baseColorClass,
+  subtext,
+  colorKey,
+  barHeight,
+  isLast = false,
 }: {
+  icon: typeof Brain
   label: string
   percent: number
-  weight: 'heavy' | 'medium' | 'light'
-  baseColorClass: 'indigo' | 'sky' | 'emerald'
+  subtext: string
+  colorKey: keyof typeof CONTRIBUTOR_CONFIG
+  barHeight: string
+  isLast?: boolean
 }) {
-  const isComplete = percent >= 100
-  const isFlowing = percent > 0 && percent < 100
+  const colors = CONTRIBUTOR_CONFIG[colorKey]
   const isEmpty = percent === 0
-
-  const heightClass = weight === 'heavy' ? 'h-[7px]' : weight === 'medium' ? 'h-[5px]' : 'h-1'
-
-  const colorMap = {
-    indigo: {
-      bar: "from-indigo-400/80 to-indigo-500/90 dark:from-indigo-400/60 dark:to-indigo-500/80",
-      bg: "bg-indigo-500/5 dark:bg-indigo-500/10",
-      text: "text-indigo-600/70 dark:text-indigo-400/70"
-    },
-    sky: {
-      bar: "from-sky-400/80 to-sky-500/90 dark:from-sky-400/60 dark:to-sky-500/80",
-      bg: "bg-sky-500/5 dark:bg-sky-500/10",
-      text: "text-sky-600/70 dark:text-sky-400/70"
-    },
-    emerald: {
-      bar: "from-emerald-400/80 to-emerald-500/90 dark:from-emerald-400/60 dark:to-emerald-500/80",
-      bg: "bg-emerald-500/5 dark:bg-emerald-500/10",
-      text: "text-emerald-600/70 dark:text-emerald-400/70"
-    }
-  }
-
-  const colors = colorMap[baseColorClass]
+  const isFull = percent >= 100
+  const isActive = percent > 0 && percent < 100
 
   return (
-    <div className="relative flex flex-col gap-1.5">
-      <div className="flex items-center justify-between">
-        <span className={`text-[9.5px] font-bold uppercase tracking-[0.15em] ${isEmpty ? "text-muted-foreground/40" : colors.text}`}>
-          {label}
-        </span>
-        {isComplete && <span className="text-[8px] font-black uppercase tracking-wider text-muted-foreground/30">Locked</span>}
-        {isFlowing && <span className="text-[8px] font-black uppercase tracking-wider text-muted-foreground/30">Building</span>}
-        {isEmpty && <span className="text-[8px] font-black uppercase tracking-wider text-muted-foreground/20">Waiting</span>}
+    <div className={`relative flex items-start gap-3 ${!isLast ? 'pb-4' : ''}`}>
+      {/* Spine connector */}
+      {!isLast && (
+        <div className="contributor-spine absolute left-[13px] top-7 bottom-0 w-px" />
+      )}
+
+      {/* Icon node */}
+      <div className={`relative z-10 flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-full ${isEmpty ? 'bg-muted/20 dark:bg-muted/10' : colors.iconBg} transition-all duration-500`}>
+        <Icon className={`h-3.5 w-3.5 ${isEmpty ? 'text-muted-foreground/25' : colors.iconText}`} />
       </div>
 
-      <div className={`relative w-full overflow-hidden rounded-full ${heightClass} ${colors.bg}`}>
-        <motion.div
-          className={`absolute left-0 top-0 h-full rounded-full bg-gradient-to-r ${colors.bar}`}
-          initial={{ width: 0 }}
-          animate={{ width: `${percent}%` }}
-          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-        />
+      {/* Row content */}
+      <div className="flex-1 min-w-0 pt-0.5 space-y-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className={`text-[10.5px] font-bold tracking-wide transition-colors duration-500 ${isEmpty ? 'text-muted-foreground/35' : colors.text}`}>
+            {label}
+          </span>
+          <span className={`text-[11px] font-black font-mono tabular-nums transition-colors duration-500 ${isEmpty ? 'text-muted-foreground/25' : isFull ? colors.text : 'text-primary/70 dark:text-primary/60'}`}>
+            {percent}%
+          </span>
+        </div>
 
-        {/* Tension / Pulse effect for 'almost there' feeling */}
-        {isFlowing && percent >= 40 && (
+        {/* Weighted progress bar */}
+        <div className={`relative w-full overflow-hidden rounded-full ${barHeight} ${isEmpty ? 'bg-muted/15 dark:bg-muted/10' : colors.bg} transition-all duration-500`}>
           <motion.div
-            className="absolute top-0 right-0 h-full w-12 bg-gradient-to-r from-transparent via-white/40 to-transparent blur-[1px]"
-            animate={{ x: ["-100%", "200%"] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            className={`absolute left-0 top-0 h-full rounded-full bg-gradient-to-r ${colors.bar}`}
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(100, percent)}%` }}
+            transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
           />
-        )}
+          {/* Active shimmer for in-progress bars */}
+          {isActive && percent >= 25 && (
+            <motion.div
+              className="absolute top-0 left-0 h-full w-8 bg-gradient-to-r from-transparent via-white/35 to-transparent"
+              animate={{ x: ['-100%', '800%'] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1.5 }}
+            />
+          )}
+        </div>
+
+        {/* Sub-metric */}
+        <p className={`text-[9px] font-medium transition-colors duration-500 ${isEmpty ? 'text-muted-foreground/25' : 'text-muted-foreground/55'}`}>
+          {subtext}
+        </p>
       </div>
     </div>
   )
 }
+
+// ─── Next Milestone ────────────────────────────────────────────────────────────
+
+function NextMilestone({
+  state,
+  rhythmPosition,
+  stateMeta,
+  deepMinutesToday,
+  didWorkoutToday,
+}: {
+  state: MomentumState
+  rhythmPosition: number
+  stateMeta: typeof MOMENTUM_STATE_META[MomentumState]
+  deepMinutesToday: number
+  didWorkoutToday: boolean
+}) {
+  const next = NEXT_STATE_MAP[state]
+  if (!next) return null
+
+  const milestonePercent = Math.round(rhythmPosition * 100)
+
+  const nudge = (() => {
+    if (!didWorkoutToday && deepMinutesToday < 45) return 'A focus session + movement → next level'
+    if (!didWorkoutToday) return 'Log your workout to boost momentum'
+    if (deepMinutesToday < 45) return `${Math.max(0, 45 - deepMinutesToday)}m more deep focus → ${next.label}`
+    if (deepMinutesToday < 90) return `${Math.max(0, 90 - deepMinutesToday)}m more deep focus locks in rhythm`
+    return 'Keep the rhythm going — you\'re almost there'
+  })()
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-white/40 dark:border-white/5 bg-gradient-to-br from-white/30 to-white/10 dark:from-white/[0.03] dark:to-transparent p-3.5 space-y-2.5">
+      {/* Ambient glow behind the milestone bar */}
+      <div className={`absolute -bottom-4 -right-4 h-20 w-20 rounded-full blur-2xl opacity-30 ${stateMeta.glowClassName}`} />
+
+      <div className="relative flex items-center justify-between gap-2">
+        <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">Next Milestone</span>
+        <span className="text-[9.5px] font-black text-muted-foreground/60">{milestonePercent}%</span>
+      </div>
+
+      {/* State label */}
+      <p className="relative text-[11px] font-bold text-primary/75 dark:text-primary/65 leading-snug">
+        {next.label}
+      </p>
+
+      {/* Milestone progress bar */}
+      <div className="relative h-[5px] w-full overflow-hidden rounded-full bg-primary/[0.04] dark:bg-white/[0.04] border border-white/20 dark:border-white/5">
+        <motion.div
+          className={`absolute left-0 top-0 h-full rounded-full bg-gradient-to-r ${stateMeta.barClassName} milestone-progress`}
+          initial={{ width: 0 }}
+          animate={{ width: `${milestonePercent}%` }}
+          transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
+        />
+        {/* Flowing shimmer */}
+        {milestonePercent > 10 && (
+          <motion.div
+            className="absolute top-0 left-0 h-full w-10 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+            animate={{ x: ['-100%', '900%'] }}
+            transition={{ duration: 2.8, repeat: Infinity, ease: 'linear', repeatDelay: 0.8 }}
+          />
+        )}
+      </div>
+
+      {/* Nudge text */}
+      <p className="relative text-[9px] font-medium text-muted-foreground/50 leading-relaxed">
+        {nudge}
+      </p>
+    </div>
+  )
+}
+
+// ─── Momentum Rhythm (Workspace Signal) ───────────────────────────────────────
 
 function MomentumRhythm({
   summary,
@@ -232,71 +343,101 @@ function MomentumRhythm({
   hasActiveSession: boolean
   plannedTasksCount: number
 }) {
-  const stateMeta = MOMENTUM_STATE_META[summary.state] ?? MOMENTUM_STATE_META.BUILDING
+  const stateMeta = MOMENTUM_STATE_META[summary.state as MomentumState] ?? MOMENTUM_STATE_META.BUILDING
   const rhythmPosition = Math.max(0, Math.min(1, summary.rhythmPosition || 0))
 
+  // Contributor percentages
   const deepPercent = Math.min(100, Math.round((deepMinutesToday / 90) * 100))
+  const deepSubtext = deepMinutesToday > 0
+    ? `${deepMinutesToday}m / 90m deep focus today`
+    : 'No deep focus yet today'
+
+  const totalTasks = completedTodayCount + plannedTasksCount
   const executionPercent = Math.min(100, progressPercent)
+  const executionSubtext = totalTasks > 0
+    ? `${completedTodayCount} of ${totalTasks} tasks complete`
+    : 'No tasks planned yet'
+
   const movementPercent = didWorkoutToday ? 100 : 0
+  const movementSubtext = didWorkoutToday ? 'Workout logged today' : 'Not yet — movement boosts rhythm'
+
+  const flowPercent = Math.min(100, Math.round(rhythmPosition * 100))
+  const flowSubtext = TREND_LABELS[summary.trend]
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/50 bg-white/35 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] backdrop-blur-md dark:border-white/5 dark:bg-muted/[0.04]">
       {/* Ambient rhythm glow */}
-      <div className={`absolute -right-8 -top-8 h-32 w-32 rounded-full blur-3xl opacity-50 ${stateMeta.glowClassName}`} />
-      <div className={`absolute -left-8 -bottom-8 h-24 w-24 rounded-full blur-2xl opacity-40 ${stateMeta.glowClassName}`} />
+      <div className={`absolute -right-8 -top-8 h-32 w-32 rounded-full blur-3xl opacity-40 ${stateMeta.glowClassName}`} />
+      <div className={`absolute -left-8 -bottom-8 h-24 w-24 rounded-full blur-2xl opacity-30 ${stateMeta.glowClassName}`} />
 
-      <div className="relative space-y-6">
-        <div className="flex items-start justify-between gap-4 border-b border-border/10 pb-4">
-          <div className="min-w-0 space-y-1.5">
+      <div className="relative space-y-5">
+
+        {/* ── Section A: Header ── */}
+        <div className="flex items-start justify-between gap-3 border-b border-border/10 pb-4">
+          <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2">
-              <span className={`relative flex h-2.5 w-2.5 items-center justify-center`}>
-                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-40 ${stateMeta.dotClassName}`} />
-                <span className={`relative inline-flex h-2 w-2 rounded-full shadow-[0_0_12px_currentColor] ${stateMeta.dotClassName}`} />
+              <span className="relative flex h-2 w-2">
+                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-35 ${stateMeta.dotClassName}`} />
+                <span className={`relative inline-flex h-2 w-2 rounded-full ${stateMeta.dotClassName}`} />
               </span>
-              <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-                Rhythm Signal
+              <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/55">
+                Daily Rhythm
               </span>
             </div>
-            <h3 className="text-xl font-black leading-tight tracking-tight text-primary">
+            <h3 className="text-[17px] font-black leading-tight tracking-tight text-primary">
               {summary.displayLabel}
             </h3>
           </div>
-          <span className="shrink-0 rounded-full border border-border/25 bg-background/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/70">
+          <span className="shrink-0 rounded-full border border-border/20 bg-background/25 px-2.5 py-1 text-[9.5px] font-bold uppercase tracking-[0.12em] text-muted-foreground/60">
             {stateMeta.whisper}
           </span>
         </div>
 
-        {/* Global Momentum Flow */}
-        <div className="space-y-2.5">
-          <div className="flex items-center justify-between gap-3 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
-            <span>Flow</span>
-            <span className="text-right text-muted-foreground/40">{TREND_LABELS[summary.trend]}</span>
-          </div>
-          <div
-            className="h-2 overflow-hidden rounded-full bg-primary/[0.03] dark:bg-white/[0.03] border border-white/20 dark:border-white/5 shadow-inner"
-          >
-            <motion.div
-              className={`h-full rounded-full bg-gradient-to-r ${stateMeta.barClassName} relative`}
-              initial={{ width: 0 }}
-              animate={{ width: `${rhythmPosition * 100}%` }}
-              transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
-            >
-              {/* Active flowing gradient over the progress bar */}
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
-                animate={{ x: ["-100%", "200%"] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-              />
-            </motion.div>
-          </div>
+        {/* ── Section B: Daily Rhythm Contributors ── */}
+        <div className="relative">
+          <ContributorRow
+            icon={Brain}
+            label="Deep Focus"
+            percent={deepPercent}
+            subtext={deepSubtext}
+            colorKey="indigo"
+            barHeight="h-[7px]"
+          />
+          <ContributorRow
+            icon={Zap}
+            label="Execution"
+            percent={executionPercent}
+            subtext={executionSubtext}
+            colorKey="sky"
+            barHeight="h-[5px]"
+          />
+          <ContributorRow
+            icon={Activity}
+            label="Movement"
+            percent={movementPercent}
+            subtext={movementSubtext}
+            colorKey="emerald"
+            barHeight="h-1"
+          />
+          <ContributorRow
+            icon={Zap}
+            label="Flow"
+            percent={flowPercent}
+            subtext={flowSubtext}
+            colorKey="slate"
+            barHeight="h-[5px]"
+            isLast
+          />
         </div>
 
-        {/* Contributor Causality (Visual Imbalance) */}
-        <div className="grid gap-4 pt-2">
-          <ContributorFlow label="Deep Focus" percent={deepPercent} weight="heavy" baseColorClass="indigo" />
-          <ContributorFlow label="Execution" percent={executionPercent} weight="medium" baseColorClass="sky" />
-          <ContributorFlow label="Movement" percent={movementPercent} weight="light" baseColorClass="emerald" />
-        </div>
+        {/* ── Section C: Next Milestone ── */}
+        <NextMilestone
+          state={summary.state as MomentumState}
+          rhythmPosition={rhythmPosition}
+          stateMeta={stateMeta}
+          deepMinutesToday={deepMinutesToday}
+          didWorkoutToday={didWorkoutToday}
+        />
       </div>
     </div>
   )
@@ -897,21 +1038,7 @@ export default function DashboardPage() {
                     plannedTasksCount={plannedTasks.length}
                   />
 
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-6 pt-1">
-                    {/* Tasks Left */}
-                    <div className="space-y-1.5 border-l-[3px] border-muted/30 pl-3">
-                      <div className="text-xl font-black font-mono text-primary leading-none">{allActiveTasks.length}</div>
-                      <div className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">Open</div>
-                    </div>
 
-                    {/* Time Left */}
-                    <div className="space-y-1.5 border-l-[3px] border-muted/30 pl-3">
-                      <div className="text-xl font-black font-mono text-primary leading-none">
-                        {formatMinutes(allActiveTasks.reduce((s, t) => s + t.durationMinutes, 0))}
-                      </div>
-                      <div className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">Planned</div>
-                    </div>
-                  </div>
                 </div>
 
                 {/* Minimal Ambient Workout Log */}
