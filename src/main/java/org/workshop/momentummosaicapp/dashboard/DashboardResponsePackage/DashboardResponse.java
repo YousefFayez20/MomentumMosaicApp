@@ -1,6 +1,7 @@
 package org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage;
 
 import lombok.*;
+import org.workshop.momentummosaicapp.momentum.dto.MomentumSummary;
 
 
 @Setter
@@ -12,5 +13,5 @@ public class DashboardResponse {
     private UserSummary userSummary;
     private TaskSummary taskSummary;
     private FitnessSummary fitnessSummary;
-    private int momentumScore;
+    private MomentumSummary momentumSummary;
 }

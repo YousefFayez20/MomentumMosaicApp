@@ -12,6 +12,7 @@ import org.workshop.momentummosaicapp.utility.exception.BadRequestException;
 import org.workshop.momentummosaicapp.utility.exception.ForbiddenException;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -39,9 +40,11 @@ class TaskServiceImplTest {
         appUser.setId(userId);
         when(appUserRepository.findById(userId)).thenReturn(Optional.of(appUser));
         when(taskRepository.save(any(Task.class))).thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
-        Task task = taskService.createTask("Study",userId,TaskType.SHALLOW,60);
+        LocalDate plannedForDate = LocalDate.of(2026, 5, 19);
+        Task task = taskService.createTask("Study",userId,TaskType.SHALLOW,60, plannedForDate);
         assertEquals("Study",task.getTitle());
         assertEquals(60, task.getDurationMinutes());
+        assertEquals(plannedForDate, task.getPlannedForDate());
         assertFalse(task.isCompleted());
         assertEquals(appUser, task.getAppUser());
         verify(appUserRepository).findById(userId);
@@ -55,7 +58,7 @@ class TaskServiceImplTest {
         AppUser appUser = new AppUser();
         appUser.setEnabled(true);
         appUser.setId(userId);
-        assertThrows(BadRequestException.class,() ->taskService.createTask("Studying Docker",userId,TaskType.DEEP,90));
+        assertThrows(BadRequestException.class,() ->taskService.createTask("Studying Docker",userId,TaskType.DEEP,90, LocalDate.now()));
         verifyNoInteractions(appUserRepository);
         verifyNoInteractions(taskRepository);
     }
@@ -75,9 +78,11 @@ class TaskServiceImplTest {
         task.setAppUser(appUser);
         when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
         when(taskRepository.save(task)).thenReturn(task);
-        taskService.updateTask(1L,1L,"Gym",TaskType.FITNESS,60);
+        LocalDate plannedForDate = LocalDate.of(2026, 5, 20);
+        taskService.updateTask(1L,1L,"Gym",TaskType.FITNESS,60, plannedForDate);
         assertEquals("Gym",task.getTitle());
         assertEquals(60, task.getDurationMinutes());
+        assertEquals(plannedForDate, task.getPlannedForDate());
         assertEquals(appUser, task.getAppUser());
         verify(taskRepository).save(task);
     }
@@ -112,7 +117,7 @@ class TaskServiceImplTest {
         when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
 
         assertThrows(ForbiddenException.class, () ->
-                taskService.updateTask(1L, 1L, "Hack", TaskType.FITNESS, 60)
+                taskService.updateTask(1L, 1L, "Hack", TaskType.FITNESS, 60, LocalDate.now())
         );
     }
 

@@ -84,6 +84,9 @@ components:
         durationMinutes:
           type: integer
           minimum: 1
+        plannedForDate:
+          type: string
+          format: date
 
     TaskResponse:
       type: object
@@ -102,6 +105,19 @@ components:
         completedAt:
           type: string
           format: date-time
+          nullable: true
+        status:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        actualMinutes:
+          type: integer
+          nullable: true
+        plannedForDate:
+          type: string
+          format: date
           nullable: true
 
     UserResponse:
@@ -127,6 +143,22 @@ components:
           $ref: '#/components/schemas/TaskSummary'
         fitnessSummary:
           $ref: '#/components/schemas/FitnessSummary'
+        momentumSummary:
+          $ref: '#/components/schemas/MomentumSummary'
+
+    MomentumSummary:
+      type: object
+      properties:
+        state:
+          type: string
+        displayLabel:
+          type: string
+        trend:
+          type: string
+        rhythmPosition:
+          type: number
+        contextMessage:
+          type: string
 
     UserSummary:
       type: object

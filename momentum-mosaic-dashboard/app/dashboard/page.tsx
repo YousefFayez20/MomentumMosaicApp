@@ -3,15 +3,14 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { motion } from "framer-motion"
-import { apiClient, type DashboardResponse, type ApiError, type TaskResponse } from "@/lib/api"
+import { apiClient, type DashboardResponse, type ApiError, type TaskResponse, type MomentumState, type MomentumSummary } from "@/lib/api"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { AuthGuard } from "@/components/auth-guard"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  CheckCircle2, Clock, Activity, Mountain, ArrowRight,
-  Brain, Zap, Dumbbell, Flame, Target, Check, Play, Lock,
+  CheckCircle2, Clock, Activity, ArrowRight,
+  Brain, Zap, Dumbbell, Check, Play, Lock,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { BrandedLoader } from "@/components/branded-loader"
@@ -51,6 +50,70 @@ const TASK_TYPE_META: Record<
   },
 }
 
+const MOMENTUM_STATE_META: Record<
+  MomentumState,
+  { glowClassName: string; dotClassName: string; barClassName: string; whisper: string }
+> = {
+  DORMANT: {
+    glowClassName: "bg-slate-400/10",
+    dotClassName: "bg-slate-400/60",
+    barClassName: "from-slate-300/70 to-slate-400/60 dark:from-slate-500/35 dark:to-slate-300/50",
+    whisper: "Resting",
+  },
+  RECOVERING: {
+    glowClassName: "bg-amber-400/12",
+    dotClassName: "bg-amber-400/80",
+    barClassName: "from-amber-300/70 to-teal-400/60 dark:from-amber-300/45 dark:to-teal-300/45",
+    whisper: "Returning",
+  },
+  BUILDING: {
+    glowClassName: "bg-indigo-400/10",
+    dotClassName: "bg-indigo-400/75",
+    barClassName: "from-indigo-300/70 to-sky-400/60 dark:from-indigo-300/45 dark:to-sky-300/45",
+    whisper: "Building",
+  },
+  STEADY: {
+    glowClassName: "bg-sky-400/10",
+    dotClassName: "bg-sky-400/70",
+    barClassName: "from-sky-300/65 to-teal-400/55 dark:from-sky-300/45 dark:to-teal-300/45",
+    whisper: "Steady",
+  },
+  STRONG: {
+    glowClassName: "bg-indigo-500/12",
+    dotClassName: "bg-indigo-500/80",
+    barClassName: "from-indigo-400/70 to-emerald-400/55 dark:from-indigo-300/50 dark:to-emerald-300/45",
+    whisper: "Focused",
+  },
+  LOCKED_IN: {
+    glowClassName: "bg-emerald-400/12",
+    dotClassName: "bg-emerald-400/85",
+    barClassName: "from-emerald-300/70 to-indigo-400/60 dark:from-emerald-300/50 dark:to-indigo-300/45",
+    whisper: "Aligned",
+  },
+  COOLING: {
+    glowClassName: "bg-slate-400/10",
+    dotClassName: "bg-slate-400/60",
+    barClassName: "from-slate-300/65 to-sky-300/50 dark:from-slate-400/40 dark:to-sky-300/35",
+    whisper: "Cooling",
+  },
+}
+
+const TREND_LABELS: Record<MomentumSummary["trend"], string> = {
+  RISING: "Rising gently",
+  STABLE: "Steady rhythm",
+  FALLING: "Cooling down",
+}
+
+const NEXT_STATE_MAP: Record<MomentumState, { label: string; state: MomentumState } | null> = {
+  DORMANT: { label: "Recovering Rhythm", state: "RECOVERING" },
+  RECOVERING: { label: "Building Momentum", state: "BUILDING" },
+  BUILDING: { label: "Steady Rhythm", state: "STEADY" },
+  STEADY: { label: "Strong Focus", state: "STRONG" },
+  STRONG: { label: "Locked In", state: "LOCKED_IN" },
+  LOCKED_IN: null,
+  COOLING: { label: "Steady Rhythm", state: "STEADY" },
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatMinutes(totalMinutes: number) {
@@ -81,6 +144,303 @@ function getReadinessHint(taskType: string) {
     default:
       return "Ready when you are to lock in focus."
   }
+}
+
+// ─── Contributor Row ──────────────────────────────────────────────────────────
+
+const CONTRIBUTOR_CONFIG = {
+  indigo: {
+    bar: "from-indigo-400/85 to-indigo-500/95 dark:from-indigo-400/65 dark:to-indigo-500/85",
+    bg: "bg-indigo-500/[0.06] dark:bg-indigo-500/[0.10]",
+    text: "text-indigo-600/80 dark:text-indigo-400/80",
+    iconBg: "bg-indigo-500/10 dark:bg-indigo-500/15",
+    iconText: "text-indigo-500/80 dark:text-indigo-400/80",
+    dot: "bg-indigo-500",
+  },
+  sky: {
+    bar: "from-sky-400/85 to-sky-500/95 dark:from-sky-400/65 dark:to-sky-500/85",
+    bg: "bg-sky-500/[0.06] dark:bg-sky-500/[0.10]",
+    text: "text-sky-600/80 dark:text-sky-400/80",
+    iconBg: "bg-sky-500/10 dark:bg-sky-500/15",
+    iconText: "text-sky-500/80 dark:text-sky-400/80",
+    dot: "bg-sky-500",
+  },
+  emerald: {
+    bar: "from-emerald-400/85 to-emerald-500/95 dark:from-emerald-400/65 dark:to-emerald-500/85",
+    bg: "bg-emerald-500/[0.06] dark:bg-emerald-500/[0.10]",
+    text: "text-emerald-600/80 dark:text-emerald-400/80",
+    iconBg: "bg-emerald-500/10 dark:bg-emerald-500/15",
+    iconText: "text-emerald-500/80 dark:text-emerald-400/80",
+    dot: "bg-emerald-500",
+  },
+  slate: {
+    bar: "from-slate-400/75 to-indigo-400/65 dark:from-slate-400/55 dark:to-indigo-400/50",
+    bg: "bg-slate-400/[0.05] dark:bg-slate-400/[0.08]",
+    text: "text-slate-500/80 dark:text-slate-400/80",
+    iconBg: "bg-slate-400/10 dark:bg-slate-400/15",
+    iconText: "text-slate-500/70 dark:text-slate-400/70",
+    dot: "bg-slate-400",
+  },
+} as const
+
+function ContributorRow({
+  icon: Icon,
+  label,
+  percent,
+  subtext,
+  colorKey,
+  barHeight,
+  isLast = false,
+}: {
+  icon: typeof Brain
+  label: string
+  percent: number
+  subtext: string
+  colorKey: keyof typeof CONTRIBUTOR_CONFIG
+  barHeight: string
+  isLast?: boolean
+}) {
+  const colors = CONTRIBUTOR_CONFIG[colorKey]
+  const isEmpty = percent === 0
+  const isFull = percent >= 100
+  const isActive = percent > 0 && percent < 100
+
+  return (
+    <div className={`relative flex items-start gap-3 ${!isLast ? 'pb-4' : ''}`}>
+      {/* Spine connector */}
+      {!isLast && (
+        <div className="contributor-spine absolute left-[13px] top-7 bottom-0 w-px" />
+      )}
+
+      {/* Icon node */}
+      <div className={`relative z-10 flex-shrink-0 flex h-7 w-7 items-center justify-center rounded-full ${isEmpty ? 'bg-muted/20 dark:bg-muted/10' : colors.iconBg} transition-all duration-500`}>
+        <Icon className={`h-3.5 w-3.5 ${isEmpty ? 'text-muted-foreground/25' : colors.iconText}`} />
+      </div>
+
+      {/* Row content */}
+      <div className="flex-1 min-w-0 pt-0.5 space-y-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <span className={`text-[10.5px] font-bold tracking-wide transition-colors duration-500 ${isEmpty ? 'text-muted-foreground/35' : colors.text}`}>
+            {label}
+          </span>
+          <span className={`text-[11px] font-black font-mono tabular-nums transition-colors duration-500 ${isEmpty ? 'text-muted-foreground/25' : isFull ? colors.text : 'text-primary/70 dark:text-primary/60'}`}>
+            {percent}%
+          </span>
+        </div>
+
+        {/* Weighted progress bar */}
+        <div className={`relative w-full overflow-hidden rounded-full ${barHeight} ${isEmpty ? 'bg-muted/15 dark:bg-muted/10' : colors.bg} transition-all duration-500`}>
+          <motion.div
+            className={`absolute left-0 top-0 h-full rounded-full bg-gradient-to-r ${colors.bar}`}
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(100, percent)}%` }}
+            transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+          />
+          {/* Active shimmer for in-progress bars */}
+          {isActive && percent >= 25 && (
+            <motion.div
+              className="absolute top-0 left-0 h-full w-8 bg-gradient-to-r from-transparent via-white/35 to-transparent"
+              animate={{ x: ['-100%', '800%'] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1.5 }}
+            />
+          )}
+        </div>
+
+        {/* Sub-metric */}
+        <p className={`text-[9px] font-medium transition-colors duration-500 ${isEmpty ? 'text-muted-foreground/25' : 'text-muted-foreground/55'}`}>
+          {subtext}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// ─── Next Milestone ────────────────────────────────────────────────────────────
+
+function NextMilestone({
+  state,
+  rhythmPosition,
+  stateMeta,
+  deepMinutesToday,
+  didWorkoutToday,
+}: {
+  state: MomentumState
+  rhythmPosition: number
+  stateMeta: typeof MOMENTUM_STATE_META[MomentumState]
+  deepMinutesToday: number
+  didWorkoutToday: boolean
+}) {
+  const next = NEXT_STATE_MAP[state]
+  if (!next) return null
+
+  const milestonePercent = Math.round(rhythmPosition * 100)
+
+  const nudge = (() => {
+    if (!didWorkoutToday && deepMinutesToday < 45) return 'A focus session + movement → next level'
+    if (!didWorkoutToday) return 'Log your workout to boost momentum'
+    if (deepMinutesToday < 45) return `${Math.max(0, 45 - deepMinutesToday)}m more deep focus → ${next.label}`
+    if (deepMinutesToday < 90) return `${Math.max(0, 90 - deepMinutesToday)}m more deep focus locks in rhythm`
+    return 'Keep the rhythm going — you\'re almost there'
+  })()
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-white/40 dark:border-white/5 bg-gradient-to-br from-white/30 to-white/10 dark:from-white/[0.03] dark:to-transparent p-3.5 space-y-2.5">
+      {/* Ambient glow behind the milestone bar */}
+      <div className={`absolute -bottom-4 -right-4 h-20 w-20 rounded-full blur-2xl opacity-30 ${stateMeta.glowClassName}`} />
+
+      <div className="relative flex items-center justify-between gap-2">
+        <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">Next Milestone</span>
+        <span className="text-[9.5px] font-black text-muted-foreground/60">{milestonePercent}%</span>
+      </div>
+
+      {/* State label */}
+      <p className="relative text-[11px] font-bold text-primary/75 dark:text-primary/65 leading-snug">
+        {next.label}
+      </p>
+
+      {/* Milestone progress bar */}
+      <div className="relative h-[5px] w-full overflow-hidden rounded-full bg-primary/[0.04] dark:bg-white/[0.04] border border-white/20 dark:border-white/5">
+        <motion.div
+          className={`absolute left-0 top-0 h-full rounded-full bg-gradient-to-r ${stateMeta.barClassName} milestone-progress`}
+          initial={{ width: 0 }}
+          animate={{ width: `${milestonePercent}%` }}
+          transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
+        />
+        {/* Flowing shimmer */}
+        {milestonePercent > 10 && (
+          <motion.div
+            className="absolute top-0 left-0 h-full w-10 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+            animate={{ x: ['-100%', '900%'] }}
+            transition={{ duration: 2.8, repeat: Infinity, ease: 'linear', repeatDelay: 0.8 }}
+          />
+        )}
+      </div>
+
+      {/* Nudge text */}
+      <p className="relative text-[9px] font-medium text-muted-foreground/50 leading-relaxed">
+        {nudge}
+      </p>
+    </div>
+  )
+}
+
+// ─── Momentum Rhythm (Workspace Signal) ───────────────────────────────────────
+
+function MomentumRhythm({
+  summary,
+  deepMinutesToday,
+  completedTodayCount,
+  progressPercent,
+  didWorkoutToday,
+  hasActiveSession,
+  plannedTasksCount,
+}: {
+  summary: MomentumSummary
+  deepMinutesToday: number
+  completedTodayCount: number
+  progressPercent: number
+  didWorkoutToday: boolean
+  hasActiveSession: boolean
+  plannedTasksCount: number
+}) {
+  const stateMeta = MOMENTUM_STATE_META[summary.state as MomentumState] ?? MOMENTUM_STATE_META.BUILDING
+  const rhythmPosition = Math.max(0, Math.min(1, summary.rhythmPosition || 0))
+
+  // Contributor percentages
+  const deepPercent = Math.min(100, Math.round((deepMinutesToday / 90) * 100))
+  const deepSubtext = deepMinutesToday > 0
+    ? `${deepMinutesToday}m / 90m deep focus today`
+    : 'No deep focus yet today'
+
+  const totalTasks = completedTodayCount + plannedTasksCount
+  const executionPercent = Math.min(100, progressPercent)
+  const executionSubtext = totalTasks > 0
+    ? `${completedTodayCount} of ${totalTasks} tasks complete`
+    : 'No tasks planned yet'
+
+  const movementPercent = didWorkoutToday ? 100 : 0
+  const movementSubtext = didWorkoutToday ? 'Workout logged today' : 'Not yet — movement boosts rhythm'
+
+  const flowPercent = Math.min(100, Math.round(rhythmPosition * 100))
+  const flowSubtext = TREND_LABELS[summary.trend]
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-white/50 bg-white/35 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] backdrop-blur-md dark:border-white/5 dark:bg-muted/[0.04]">
+      {/* Ambient rhythm glow */}
+      <div className={`absolute -right-8 -top-8 h-32 w-32 rounded-full blur-3xl opacity-40 ${stateMeta.glowClassName}`} />
+      <div className={`absolute -left-8 -bottom-8 h-24 w-24 rounded-full blur-2xl opacity-30 ${stateMeta.glowClassName}`} />
+
+      <div className="relative space-y-5">
+
+        {/* ── Section A: Header ── */}
+        <div className="flex items-start justify-between gap-3 border-b border-border/10 pb-4">
+          <div className="min-w-0 space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2">
+                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-35 ${stateMeta.dotClassName}`} />
+                <span className={`relative inline-flex h-2 w-2 rounded-full ${stateMeta.dotClassName}`} />
+              </span>
+              <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/55">
+                Daily Rhythm
+              </span>
+            </div>
+            <h3 className="text-[17px] font-black leading-tight tracking-tight text-primary">
+              {summary.displayLabel}
+            </h3>
+          </div>
+          <span className="shrink-0 rounded-full border border-border/20 bg-background/25 px-2.5 py-1 text-[9.5px] font-bold uppercase tracking-[0.12em] text-muted-foreground/60">
+            {stateMeta.whisper}
+          </span>
+        </div>
+
+        {/* ── Section B: Daily Rhythm Contributors ── */}
+        <div className="relative">
+          <ContributorRow
+            icon={Brain}
+            label="Deep Focus"
+            percent={deepPercent}
+            subtext={deepSubtext}
+            colorKey="indigo"
+            barHeight="h-[7px]"
+          />
+          <ContributorRow
+            icon={Zap}
+            label="Execution"
+            percent={executionPercent}
+            subtext={executionSubtext}
+            colorKey="sky"
+            barHeight="h-[5px]"
+          />
+          <ContributorRow
+            icon={Activity}
+            label="Movement"
+            percent={movementPercent}
+            subtext={movementSubtext}
+            colorKey="emerald"
+            barHeight="h-1"
+          />
+          <ContributorRow
+            icon={Zap}
+            label="Flow"
+            percent={flowPercent}
+            subtext={flowSubtext}
+            colorKey="slate"
+            barHeight="h-[5px]"
+            isLast
+          />
+        </div>
+
+        {/* ── Section C: Next Milestone ── */}
+        <NextMilestone
+          state={summary.state as MomentumState}
+          rhythmPosition={rhythmPosition}
+          stateMeta={stateMeta}
+          deepMinutesToday={deepMinutesToday}
+          didWorkoutToday={didWorkoutToday}
+        />
+      </div>
+    </div>
+  )
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -282,6 +642,9 @@ export default function DashboardPage() {
   const completedTodayCount = completedToday.length
   const totalTaskCount = allActiveTasks.length + completedTodayCount
   const plannedMinutes = allActiveTasks.reduce((s, t) => s + t.durationMinutes, 0)
+  const deepMinutesToday = completedToday
+    .filter((task) => task.taskType === "DEEP")
+    .reduce((sum, task) => sum + (task.actualMinutes ?? task.durationMinutes), 0)
   const progressPercent =
     totalTaskCount === 0 ? 100 : Math.round((completedTodayCount / totalTaskCount) * 100)
 
@@ -311,31 +674,31 @@ export default function DashboardPage() {
 
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
 
-          {/* Shallow Top Momentum Overview Surface */}
+          {/* Shallow Top Rhythm Overview Surface */}
           <div className="mb-8 bg-white/50 dark:bg-muted/[0.03] border border-white/60 dark:border-white/5 backdrop-blur-md rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden shadow-xs">
             <div>
-              <span className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">Today's Momentum</span>
+              <span className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">Today&apos;s Rhythm</span>
               <h1 className="text-base sm:text-lg font-black tracking-tight text-primary mt-0.5">
                 {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
               </h1>
               <p className="text-[10.5px] font-semibold text-muted-foreground/50 mt-1 uppercase tracking-wider">
-                Structured execution • One active session at a time
+                One active session at a time
               </p>
             </div>
-            
+
             <div className="flex flex-col sm:items-end gap-1 shrink-0 text-left sm:text-right">
               <div className="text-xs font-bold text-muted-foreground/75 uppercase tracking-wide">
-                {completedTodayCount} completed <span className="text-muted-foreground/30">•</span> {allActiveTasks.length} remaining <span className="text-muted-foreground/30">•</span> {formatMinutes(plannedMinutes)} planned
+                {completedTodayCount} settled <span className="text-muted-foreground/30">•</span> {allActiveTasks.length} open <span className="text-muted-foreground/30">•</span> {formatMinutes(plannedMinutes)} planned
               </div>
-              <span className="text-[10px] font-bold text-indigo-500/80 dark:text-indigo-400/80">
-                Focus Ratio: {progressPercent}%
+              <span className="text-[10px] font-bold text-indigo-500/70 dark:text-indigo-300/70">
+                {dashboard.momentumSummary.displayLabel}
               </span>
             </div>
 
             {/* Thin Atmospheric Environmental Progress Track */}
             <div className="h-1 w-full bg-primary/5 dark:bg-white/5 absolute bottom-0 left-0">
-              <div 
-                className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-700 ease-out" 
+              <div
+                className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-700 ease-out"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -347,7 +710,7 @@ export default function DashboardPage() {
 
               {/* Workspace Execution Column Container (Left Panel Surface) */}
               <div className={`order-2 space-y-8 lg:order-1 bg-white/40 dark:bg-muted/[0.03] backdrop-blur-xl border border-white/60 dark:border-white/5 rounded-3xl p-6 sm:p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] transition-all duration-700`}>
-                
+
                 {/* ── EMPTY STATE ── */}
                 {allActiveTasks.length === 0 ? (
                   <div className="rounded-3xl border border-dashed border-muted/30 bg-muted/5 p-12 text-center">
@@ -375,12 +738,12 @@ export default function DashboardPage() {
                     {(() => {
                       const task = inProgressTask || plannedTasks[0]
                       if (!task) return null
-                      
+
                       const meta = TASK_TYPE_META[task.taskType]
                       const TaskIcon = meta.icon
                       const isCurrentFocus = task.status === "IN_PROGRESS"
                       const readinessHint = getReadinessHint(task.taskType)
-                      
+
                       return (
                         <div className="relative">
                           {/* NOW Stepper Outlined Glowing node (slow breathe opacity, no pulsing alert) */}
@@ -389,13 +752,13 @@ export default function DashboardPage() {
                           </div>
 
                           <div className={`relative rounded-xl border border-white/70 dark:border-white/10 bg-gradient-to-br from-card to-muted/20 p-4 sm:p-4.5 shadow-sm premium-card-static`}>
-                            
+
                             {/* Header section with step indicator and minor quick actions */}
                             <div className="flex items-center justify-between border-b border-border/10 pb-2.5 mb-3">
                               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                                 {isCurrentFocus ? "Current Focus" : `Next Commitment (1 of ${allActiveTasks.length})`}
                               </span>
-                              
+
                               {!isCurrentFocus && (
                                 <div className="flex items-center">
                                   <Button
@@ -429,7 +792,7 @@ export default function DashboardPage() {
                                   </span>
                                 )}
                               </div>
-                              
+
                               <h3 className="text-xl sm:text-2xl font-black tracking-tight text-primary leading-tight">
                                 {task.title}
                               </h3>
@@ -491,14 +854,14 @@ export default function DashboardPage() {
                     {(() => {
                       const upcomingQueue = inProgressTask ? plannedTasks : plannedTasks.slice(1)
                       if (upcomingQueue.length === 0) return null
-                      
+
                       const upcomingMinutes = upcomingQueue.reduce((s, t) => s + t.durationMinutes, 0)
-                      
+
                       // Adaptive compression logic: show max 2 items, collapse the rest.
                       const maxVisible = 2
                       const visibleTasks = upcomingQueue.slice(0, maxVisible)
                       const collapsedCount = upcomingQueue.length - maxVisible
-                      
+
                       return (
                         <div className={`space-y-4 pt-6 border-t border-border/5 transition-all duration-700 ease-in-out ${hasActiveSession ? "opacity-20 pointer-events-none blur-[0.2px]" : "opacity-100"}`}>
                           <div className="flex items-center justify-between">
@@ -509,30 +872,28 @@ export default function DashboardPage() {
                               {upcomingQueue.length} remaining • {upcomingMinutes}m
                             </span>
                           </div>
-                          
+
                           <div className="space-y-3 pt-1">
                             {visibleTasks.map((task, index) => {
                               const meta = TASK_TYPE_META[task.taskType]
                               const TaskIcon = meta.icon
                               const stepNum = inProgressTask ? index + 1 : index + 2
                               const isNextUp = index === 0
-                              
+
                               return (
-                                <div 
-                                  key={task.id} 
-                                  className={`relative flex items-center justify-between gap-4 p-3 rounded-xl border transition-all duration-300 ${
-                                    isNextUp 
-                                      ? "border-white/50 dark:border-white/10 bg-white/30 dark:bg-muted/15 opacity-95 hover:border-border/40" 
-                                      : "border-white/20 dark:border-white/5 bg-white/10 dark:bg-muted/5 opacity-65 hover:opacity-85 hover:border-border/30"
-                                  } group`}
+                                <div
+                                  key={task.id}
+                                  className={`relative flex items-center justify-between gap-4 p-3 rounded-xl border transition-all duration-300 ${isNextUp
+                                    ? "border-white/50 dark:border-white/10 bg-white/30 dark:bg-muted/15 opacity-95 hover:border-border/40"
+                                    : "border-white/20 dark:border-white/5 bg-white/10 dark:bg-muted/5 opacity-65 hover:opacity-85 hover:border-border/30"
+                                    } group`}
                                 >
                                   {/* Stepper Node Bullet - next up is indigo styled to inherit focus momentum */}
-                                  <div className={`absolute -left-[20.5px] top-[16.5px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background border shadow-xs z-10 ${
-                                    isNextUp ? "border-indigo-400 dark:border-indigo-500" : "border-muted-foreground/30"
-                                  }`}>
+                                  <div className={`absolute -left-[20.5px] top-[16.5px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background border shadow-xs z-10 ${isNextUp ? "border-indigo-400 dark:border-indigo-500" : "border-muted-foreground/30"
+                                    }`}>
                                     <span className={`text-[7.5px] font-black ${isNextUp ? "text-indigo-500" : "text-muted-foreground/80"}`}>{stepNum}</span>
                                   </div>
-                                  
+
                                   {/* Task details */}
                                   <div className="min-w-0 flex-1 pl-1 space-y-1">
                                     <div className="flex items-center gap-2">
@@ -554,7 +915,7 @@ export default function DashboardPage() {
                                       <span>{task.durationMinutes}m</span>
                                     </div>
                                   </div>
-                                  
+
                                   {/* Inline actions */}
                                   <div className="flex items-center gap-1.5 opacity-60 sm:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                                     {!hasActiveSession && (
@@ -586,7 +947,7 @@ export default function DashboardPage() {
                                 </div>
                               )
                             })}
-                            
+
                             {/* Dynamic indicator row for collapsed tasks */}
                             {collapsedCount > 0 && (
                               <div className="relative flex items-center justify-between p-2 rounded-lg bg-muted/5 opacity-55 border border-dashed border-border/10">
@@ -632,10 +993,10 @@ export default function DashboardPage() {
                               const TaskIcon = meta.icon
                               const completedMin = task.actualMinutes ?? task.durationMinutes
                               const timeStr = formatCompletedTime(task.completedAt ?? "")
-                              
+
                               return (
-                                <div 
-                                  key={task.id} 
+                                <div
+                                  key={task.id}
                                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/10 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.01] backdrop-blur-xs text-[10.5px]"
                                 >
                                   <div className="flex h-3 w-3 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600/70 dark:text-emerald-400/70">
@@ -661,81 +1022,65 @@ export default function DashboardPage() {
               {/* Sidebar Panel Surface (Unified System Support) */}
               <div className={`order-1 space-y-8 lg:order-2 bg-white/45 dark:bg-muted/[0.03] backdrop-blur-xl border border-white/60 dark:border-white/5 rounded-3xl p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-all duration-700 ease-in-out ${hasActiveSession ? "opacity-25 pointer-events-none blur-[0.6px]" : "opacity-100"}`}>
                 {/* System Insights Ambient Telemetry (Combined with Glance) */}
-                <div className="space-y-6 px-2">
+                <div className="space-y-5 px-2">
                   <h4 className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground/50 flex items-center gap-1.5 mb-2">
                     <Zap className="h-3.5 w-3.5 text-indigo-500/60" />
-                    System Telemetry
+                    Workspace Signal
                   </h4>
-                
-                <div className="grid grid-cols-2 gap-x-4 gap-y-6">
-                  {/* Momentum */}
-                  <div className="space-y-1.5 border-l-[3px] border-indigo-500/30 pl-3">
-                    <div className="text-2xl font-black font-mono text-primary leading-none">{dashboard.momentumScore}</div>
-                    <div className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">Momentum</div>
-                  </div>
-                  
-                  {/* Streak */}
-                  <div className="space-y-1.5 border-l-[3px] border-indigo-500/30 pl-3">
-                    <div className="text-2xl font-black font-mono text-primary leading-none">{fitnessSummary.workoutStreak}</div>
-                    <div className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">Day Streak</div>
-                  </div>
-                  
-                  {/* Tasks Left */}
-                  <div className="space-y-1.5 border-l-[3px] border-muted/30 pl-3">
-                    <div className="text-2xl font-black font-mono text-primary leading-none">{allActiveTasks.length}</div>
-                    <div className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">Tasks Open</div>
-                  </div>
-                  
-                  {/* Time Left */}
-                  <div className="space-y-1.5 border-l-[3px] border-muted/30 pl-3">
-                    <div className="text-2xl font-black font-mono text-primary leading-none">
-                      {formatMinutes(allActiveTasks.reduce((s, t) => s + t.durationMinutes, 0))}
-                    </div>
-                    <div className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-[0.15em]">Time Planned</div>
-                  </div>
-                </div>
-              </div>
 
-              {/* Minimal Ambient Workout Log */}
-              <div className="mt-10 border-t border-border/5 pt-8 px-2">
-                <div className="flex items-center gap-4">
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${fitnessSummary.didWorkoutToday ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500" : "bg-muted/30 text-muted-foreground/40"}`}>
-                    {fitnessSummary.didWorkoutToday ? <CheckCircle2 className="h-4 w-4" /> : <Activity className="h-4 w-4" />}
-                  </div>
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <h3 className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-muted-foreground/70">
-                      {fitnessSummary.didWorkoutToday ? "Workout Logged" : "Daily Workout"}
-                    </h3>
-                    <div className="pt-0.5">
-                      {fitnessSummary.didWorkoutToday ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleWorkoutToggle(false)}
-                          disabled={workoutSubmitting}
-                          className="h-5 text-[10px] px-0 hover:bg-transparent text-muted-foreground hover:text-primary transition-colors cursor-pointer"
-                        >
-                          {workoutSubmitting ? "Reverting…" : "Undo Log"}
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          className="h-6 text-[10px] px-3.5 rounded-full cursor-pointer hover:bg-primary/5 hover:text-primary border-primary/20 transition-colors"
-                          onClick={() => handleWorkoutToggle(true)}
-                          disabled={workoutSubmitting}
-                        >
-                          {workoutSubmitting ? "Logging…" : "Log Completion"}
-                        </Button>
-                      )}
+                  <MomentumRhythm
+                    summary={dashboard.momentumSummary}
+                    deepMinutesToday={deepMinutesToday}
+                    completedTodayCount={completedTodayCount}
+                    progressPercent={progressPercent}
+                    didWorkoutToday={fitnessSummary.didWorkoutToday}
+                    hasActiveSession={hasActiveSession}
+                    plannedTasksCount={plannedTasks.length}
+                  />
+
+
+                </div>
+
+                {/* Minimal Ambient Workout Log */}
+                <div className="mt-10 border-t border-border/5 pt-8 px-2">
+                  <div className="flex items-center gap-4">
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${fitnessSummary.didWorkoutToday ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500" : "bg-muted/30 text-muted-foreground/40"}`}>
+                      {fitnessSummary.didWorkoutToday ? <CheckCircle2 className="h-4 w-4" /> : <Activity className="h-4 w-4" />}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <h3 className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-muted-foreground/70">
+                        {fitnessSummary.didWorkoutToday ? "Workout Logged" : "Daily Workout"}
+                      </h3>
+                      <div className="pt-0.5">
+                        {fitnessSummary.didWorkoutToday ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleWorkoutToggle(false)}
+                            disabled={workoutSubmitting}
+                            className="h-5 text-[10px] px-0 hover:bg-transparent text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                          >
+                            {workoutSubmitting ? "Reverting…" : "Undo Log"}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            className="h-6 text-[10px] px-3.5 rounded-full cursor-pointer hover:bg-primary/5 hover:text-primary border-primary/20 transition-colors"
+                            onClick={() => handleWorkoutToggle(true)}
+                            disabled={workoutSubmitting}
+                          >
+                            {workoutSubmitting ? "Logging…" : "Log Completion"}
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          </div>
         </div>
-      </div>
-    </DashboardLayout>
-  </AuthGuard>
-)
+      </DashboardLayout>
+    </AuthGuard>
+  )
 }

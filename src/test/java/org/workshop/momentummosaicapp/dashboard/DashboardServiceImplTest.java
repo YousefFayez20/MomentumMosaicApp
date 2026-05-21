@@ -10,11 +10,11 @@ import org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage.Dashboa
 import org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage.FitnessSummary;
 import org.workshop.momentummosaicapp.dashboard.DashboardResponsePackage.TaskSummary;
 import org.workshop.momentummosaicapp.fitness.DailyFitnessLog;
-import org.workshop.momentummosaicapp.fitness.DailyFitnessLogRepository;
 import org.workshop.momentummosaicapp.fitness.FitnessService;
+import org.workshop.momentummosaicapp.momentum.MomentumService;
+import org.workshop.momentummosaicapp.momentum.dto.MomentumSummary;
 import org.workshop.momentummosaicapp.task.Task;
 import org.workshop.momentummosaicapp.task.TaskRepository;
-import org.workshop.momentummosaicapp.task.TaskService;
 import org.workshop.momentummosaicapp.task.TaskStatus;
 import org.workshop.momentummosaicapp.task.TaskType;
 import org.workshop.momentummosaicapp.user.AppUser;
@@ -38,9 +38,9 @@ class DashboardServiceImplTest {
     @Mock
     TaskRepository taskRepository;
     @Mock
-    TaskService taskService;
-    @Mock
     FitnessService fitnessService;
+    @Mock
+    MomentumService momentumService;
     @InjectMocks
     DashboardServiceImpl dashboardService;
 
@@ -82,6 +82,15 @@ class DashboardServiceImplTest {
         when(fitnessService.getTodayLog(userId)).thenReturn(Optional.of(new DailyFitnessLog()));
         when(fitnessService.getTotalWorkoutDays(userId)).thenReturn(10);
         when(fitnessService.getWorkoutStreak(userId)).thenReturn(3);
+        when(momentumService.computeForUser(userId)).thenReturn(
+                MomentumSummary.builder()
+                        .state("BUILDING")
+                        .displayLabel("Building Momentum")
+                        .trend("RISING")
+                        .rhythmPosition(0.64)
+                        .contextMessage("Momentum building. Keep showing up.")
+                        .build()
+        );
         //act
         DashboardResponse response = dashboardService.getDashboard(userId);
         // User summary
@@ -103,8 +112,11 @@ class DashboardServiceImplTest {
         assertEquals(10, fitnessSummary.getTotalWorkoutDays());
         assertEquals(3, fitnessSummary.getWorkoutStreak());
 
-        // Momentum Score
-        assertEquals(53, response.getMomentumScore());
+        // Momentum Summary
+        assertNotNull(response.getMomentumSummary());
+        assertEquals("BUILDING", response.getMomentumSummary().getState());
+        assertEquals("Building Momentum", response.getMomentumSummary().getDisplayLabel());
+        assertEquals("RISING", response.getMomentumSummary().getTrend());
     }
     @Test
     void shouldThrowIfUserNotFound() {

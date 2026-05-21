@@ -31,7 +31,13 @@ public class TaskController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
         }
         Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
-        Task task = taskService.createTask(request.getTitle(),userId,request.getTaskType(),request.getDurationMinutes());
+        Task task = taskService.createTask(
+                request.getTitle(),
+                userId,
+                request.getTaskType(),
+                request.getDurationMinutes(),
+                request.getPlannedForDate()
+        );
         return dtoMapper.taskToTaskResponse(task);
     }
     @PutMapping("/{taskId}")
@@ -44,7 +50,14 @@ public class TaskController {
         }
         Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
 
-        Task task = taskService.updateTask(userId,taskId,request.getTitle(),request.getTaskType(),request.getDurationMinutes());
+        Task task = taskService.updateTask(
+                userId,
+                taskId,
+                request.getTitle(),
+                request.getTaskType(),
+                request.getDurationMinutes(),
+                request.getPlannedForDate()
+        );
         return dtoMapper.taskToTaskResponse(task);
     }
     @DeleteMapping("/{taskId}")

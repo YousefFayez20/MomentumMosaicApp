@@ -13,6 +13,7 @@ import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundExceptio
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -24,7 +25,7 @@ public class TaskServiceImpl implements TaskService{
     private final AppUserRepository appUserRepository;
 
     @Override
-    public Task createTask(String title, Long userId, TaskType taskType, Integer durationMinutes) {
+    public Task createTask(String title, Long userId, TaskType taskType, Integer durationMinutes, LocalDate plannedForDate) {
        validateTaskDuration(taskType,durationMinutes);
         AppUser appUser = getUserOrThrow(userId);
         Task task = new Task();
@@ -32,12 +33,13 @@ public class TaskServiceImpl implements TaskService{
         task.setTaskType(taskType);
         task.setAppUser(appUser);
         task.setDurationMinutes(durationMinutes);
+        task.setPlannedForDate(resolvePlannedForDate(plannedForDate));
         task.setStatus(TaskStatus.PLANNED);
         return taskRepository.save(task);
     }
 
     @Override
-    public Task updateTask(Long userId, Long taskId, String title, TaskType taskType, Integer durationMinutes) {
+    public Task updateTask(Long userId, Long taskId, String title, TaskType taskType, Integer durationMinutes, LocalDate plannedForDate) {
        Task task = getTaskOrThrow(taskId);
        validateOwnership(userId,task);
        if(task.isCompleted()) throw new BadRequestException("Cannot update a completed task");
@@ -45,6 +47,7 @@ public class TaskServiceImpl implements TaskService{
        task.setTitle(title);
        task.setTaskType(taskType);
        task.setDurationMinutes(durationMinutes);
+       task.setPlannedForDate(resolvePlannedForDate(plannedForDate));
         return taskRepository.save(task);
     }
 
@@ -133,5 +136,9 @@ public class TaskServiceImpl implements TaskService{
         if(!task.getAppUser().getId().equals(userId)){
             throw new ForbiddenException("Task does not belong to this user");
         }
+    }
+
+    private LocalDate resolvePlannedForDate(LocalDate plannedForDate) {
+        return plannedForDate != null ? plannedForDate : LocalDate.now();
     }
 }

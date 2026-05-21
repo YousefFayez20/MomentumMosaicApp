@@ -10,6 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.workshop.momentummosaicapp.user.AppUser;
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Entity
 @AllArgsConstructor
@@ -36,6 +37,8 @@ public class Task {
 
     @Column(nullable = false)
     private Integer durationMinutes;
+
+    private LocalDate plannedForDate;
 
     @Column(nullable = false)
     private boolean completed;
