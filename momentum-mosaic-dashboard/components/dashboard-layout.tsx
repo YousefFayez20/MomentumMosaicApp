@@ -6,32 +6,59 @@ import { useState } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { AppLogo } from "@/components/app-logo"
-import { LayoutDashboard, ListTodo, Dumbbell, User, Menu, LogOut, X } from "lucide-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { LayoutDashboard, ListTodo, Dumbbell, User, Menu, LogOut, X, BookOpenText } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
 
-export function DashboardLayout({ children }: { children: React.ReactNode }) {
+export function DashboardLayout({
+  children,
+  beforeNavigate,
+}: {
+  children: React.ReactNode
+  beforeNavigate?: (href: string) => boolean
+}) {
   const { user, logout } = useAuth()
   const pathname = usePathname()
+  const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Workspace", href: "/workspace", icon: BookOpenText },
     { name: "Tasks", href: "/tasks", icon: ListTodo },
     { name: "Fitness", href: "/fitness", icon: Dumbbell },
     { name: "Profile", href: "/profile", icon: User },
   ]
+
+  const handleNavigate = (href: string) => {
+    const workspaceActive = href === "/workspace" && pathname.startsWith("/workspace")
+    if (pathname === href || workspaceActive) {
+      setMobileMenuOpen(false)
+      return
+    }
+
+    if (beforeNavigate && beforeNavigate(href) === false) {
+      return
+    }
+
+    setMobileMenuOpen(false)
+    router.push(href)
+  }
 
   return (
     <div className="discipline-shell relative flex min-h-screen flex-col bg-background selection:bg-primary/10">
       <div className="discipline-ambient" aria-hidden="true" />
       <header className="sticky top-0 z-50 border-b border-white/40 bg-white/30 shadow-sm backdrop-blur-2xl relative">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <Link href="/dashboard" aria-label="Go to Momentum Mosaic dashboard">
+          <button
+            type="button"
+            onClick={() => handleNavigate("/dashboard")}
+            aria-label="Go to Momentum Mosaic dashboard"
+            className="cursor-pointer"
+          >
             <AppLogo size="header" wordmarkClassName="hidden sm:inline" />
-          </Link>
+          </button>
 
           {/* Desktop Navigation */}
           <motion.nav
@@ -42,22 +69,23 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           >
             {navigation.map((item) => {
               const Icon = item.icon
-              const isActive = pathname === item.href
+              const isActive = item.href === "/workspace" ? pathname.startsWith("/workspace") : pathname === item.href
               return (
-                <Link key={item.href} href={item.href}>
-                  <Button
-                    variant={isActive ? "default" : "ghost"}
-                    className={cn(
-                      "h-9 rounded-full gap-2 px-5 transition-all duration-300",
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-100 font-semibold"
-                        : "text-muted-foreground hover:bg-white/60 hover:text-foreground font-medium scale-95 hover:scale-100",
-                    )}
-                  >
-                    <Icon className="h-4 w-4" />
-                    {item.name}
-                  </Button>
-                </Link>
+                <Button
+                  key={item.href}
+                  type="button"
+                  variant={isActive ? "default" : "ghost"}
+                  onClick={() => handleNavigate(item.href)}
+                  className={cn(
+                    "h-9 rounded-full gap-2 px-5 transition-all duration-300",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 scale-100 font-semibold"
+                      : "text-muted-foreground hover:bg-white/60 hover:text-foreground font-medium scale-95 hover:scale-100",
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  {item.name}
+                </Button>
               )
             })}
           </motion.nav>
@@ -92,14 +120,18 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             <div className="space-y-2">
               {navigation.map((item) => {
                 const Icon = item.icon
-                const isActive = pathname === item.href
+                const isActive = item.href === "/workspace" ? pathname.startsWith("/workspace") : pathname === item.href
                 return (
-                  <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant={isActive ? "default" : "ghost"} className={cn("w-full justify-start gap-3 rounded-xl", isActive ? "shadow-md" : "hover:bg-white/60")}>
-                      <Icon className="h-5 w-5" />
-                      <span className="font-medium">{item.name}</span>
-                    </Button>
-                  </Link>
+                  <Button
+                    key={item.href}
+                    type="button"
+                    variant={isActive ? "default" : "ghost"}
+                    onClick={() => handleNavigate(item.href)}
+                    className={cn("w-full justify-start gap-3 rounded-xl", isActive ? "shadow-md" : "hover:bg-white/60")}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <span className="font-medium">{item.name}</span>
+                  </Button>
                 )
               })}
               <Button variant="ghost" className="w-full justify-start gap-3 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive mt-4" onClick={logout}>

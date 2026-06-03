@@ -14,6 +14,8 @@ public interface TaskService {
     public Task abandonTask(Long userId,Long taskId);
     public List<Task> getActiveTasks(Long userId);
     public List<Task> getCompletedTasks(Long userId);
+    Task linkToWorkspace(Long userId, Long taskId, Long workspaceId);
+    Task unlinkFromWorkspace(Long userId, Long taskId);
 
 
 }

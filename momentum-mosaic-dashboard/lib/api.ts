@@ -231,6 +231,70 @@ export class ApiClient {
     ])
     return [...active, ...completed]
   }
+
+  async getWorkspaceSections() {
+    return this.request<WorkspaceSectionResponse[]>(`/api/workspaces/sections`)
+  }
+
+  async getWorkspaces() {
+    return this.request<WorkspaceSummaryResponse[]>(`/api/workspaces`)
+  }
+
+  async getWorkspace(workspaceId: number) {
+    return this.request<WorkspaceResponse>(`/api/workspaces/${workspaceId}`)
+  }
+
+  // New: create workspace (optional section)
+  async createWorkspace(data: { title: string; sectionId?: number | null }) {
+    return this.request<WorkspaceResponse>(`/api/workspaces`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  // New: create a new section
+  async createSection(data: { name: string; orderIndex?: number | null }) {
+    // Section DTO matches WorkspaceSectionResponse shape
+    return this.request<WorkspaceSectionResponse>(`/api/workspaces/sections`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async createWorkspaceEntry(
+    workspaceId: number,
+    data: {
+      entryType: WorkspaceEntryType
+      content?: string | null
+      parentEntryId?: number | null
+    },
+  ) {
+    return this.request<WorkspaceEntryResponse>(`/api/workspaces/${workspaceId}/entries`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateWorkspaceEntry(
+    workspaceId: number,
+    entryId: number,
+    data: {
+      content?: string | null
+      collapsed?: boolean
+      entryType?: WorkspaceEntryType
+    },
+  ) {
+    return this.request<WorkspaceEntryResponse>(`/api/workspaces/${workspaceId}/entries/${entryId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteWorkspaceEntry(workspaceId: number, entryId: number) {
+    return this.request<void>(`/api/workspaces/${workspaceId}/entries/${entryId}`, {
+      method: "DELETE",
+    })
+  }
 }
 
 // Types
@@ -245,6 +309,61 @@ export interface TaskResponse {
   startedAt: string | null
   actualMinutes: number | null
   plannedForDate: string | null
+  workspaceId?: number | null
+}
+
+export type WorkspaceEntryType = "BULLET" | "TOGGLE"
+
+export type WorkspaceResourceType = "LINK" | "VIDEO" | "PDF" | "DOC" | "OTHER"
+
+export interface WorkspaceSectionResponse {
+  id: number
+  name: string
+  orderIndex: number | null
+  createdAt: string
+}
+
+export interface WorkspaceSummaryResponse {
+  id: number
+  title: string
+  sectionId: number | null
+  sectionName: string | null
+  lastActiveAt: string | null
+  createdAt: string
+}
+
+export interface WorkspaceResourceResponse {
+  id: number
+  url: string
+  label: string | null
+  resourceType: WorkspaceResourceType | null
+  orderIndex: number | null
+  createdAt: string
+}
+
+export interface WorkspaceEntryResponse {
+  id: number
+  parentEntryId: number | null
+  entryType: WorkspaceEntryType
+  content: string | null
+  collapsed: boolean
+  orderIndex: number
+  createdAt: string
+  updatedAt: string
+  children: WorkspaceEntryResponse[]
+}
+
+export interface WorkspaceResponse {
+  id: number
+  title: string
+  sectionId: number | null
+  sectionName: string | null
+  archived: boolean
+  lastActiveAt: string | null
+  createdAt: string
+  updatedAt: string
+  entries: WorkspaceEntryResponse[]
+  resources: WorkspaceResourceResponse[]
 }
 
 export type MomentumState =

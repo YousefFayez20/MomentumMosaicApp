@@ -25,4 +25,5 @@ public class TaskResponse {
     private Instant startedAt;
     private Integer actualMinutes;
     private LocalDate plannedForDate;
+    private Long workspaceId; // null if not linked
 }
