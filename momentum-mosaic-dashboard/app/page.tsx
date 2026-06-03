@@ -170,8 +170,8 @@ export default function HomePage() {
               <FileText className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-primary">Notes board preview</h2>
-              <p className="text-sm text-muted-foreground">A future markdown workspace for quick capture, checklists, and next-step thinking.</p>
+              <h2 className="text-2xl font-black text-primary">Study workspace preview</h2>
+              <p className="text-sm text-muted-foreground">A plain-text workspace for focused thinking, quick capture, and one active block at a time.</p>
             </div>
           </div>
           <div className="rounded-lg border bg-background/70 p-4 font-mono text-sm shadow-inner">

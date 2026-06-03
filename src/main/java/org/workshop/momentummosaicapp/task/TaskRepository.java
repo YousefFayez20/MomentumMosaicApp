@@ -30,5 +30,11 @@ public interface TaskRepository extends JpaRepository<Task,Long>{
             @Param("userId") Long userId,
             @Param("plannedForDate") LocalDate plannedForDate
     );
-
+    // Derives total focus minutes for a workspace from completed task execution time.
+// This is why we don't need a FocusSession entity — the data already exists.
+    @Query("SELECT COALESCE(SUM(t.actualMinutes), 0) FROM Task t " +
+            "WHERE t.workspace.id = :wsId AND t.status = org.workshop.momentummosaicapp.task.TaskStatus.COMPLETED")
+    int sumActualMinutesByWorkspaceId(@Param("wsId") Long workspaceId);
+    // Get all tasks linked to a workspace for the execution list
+    List<Task> findByWorkspaceIdAndStatusNot(Long workspaceId, TaskStatus status);
 }

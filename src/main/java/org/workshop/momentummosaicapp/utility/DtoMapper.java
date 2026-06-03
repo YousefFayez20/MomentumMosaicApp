@@ -22,6 +22,7 @@ public class DtoMapper {
         taskResponse.setStatus(task.getStatus());
         taskResponse.setStartedAt(task.getStartedAt());
         taskResponse.setActualMinutes(task.getActualMinutes());
+        taskResponse.setWorkspaceId(task.getWorkspace() != null ? task.getWorkspace().getId():null);
         taskResponse.setPlannedForDate(task.getPlannedForDate());
         return taskResponse;
     }

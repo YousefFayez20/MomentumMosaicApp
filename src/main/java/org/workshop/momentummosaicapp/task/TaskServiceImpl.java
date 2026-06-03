@@ -10,6 +10,8 @@ import org.workshop.momentummosaicapp.utility.exception.BadRequestException;
 import org.workshop.momentummosaicapp.utility.exception.ConflictException;
 import org.workshop.momentummosaicapp.utility.exception.ForbiddenException;
 import org.workshop.momentummosaicapp.utility.exception.ResourceNotFoundException;
+import org.workshop.momentummosaicapp.workspace.Workspace;
+import org.workshop.momentummosaicapp.workspace.WorkspaceRepository;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -23,6 +25,7 @@ public class TaskServiceImpl implements TaskService{
 
     private final TaskRepository taskRepository;
     private final AppUserRepository appUserRepository;
+    private final WorkspaceRepository workspaceRepository;
 
     @Override
     public Task createTask(String title, Long userId, TaskType taskType, Integer durationMinutes, LocalDate plannedForDate) {
@@ -118,6 +121,29 @@ public class TaskServiceImpl implements TaskService{
         AppUser appUser = getUserOrThrow(userId);
         return taskRepository.findByAppUserIdAndCompletedTrue(userId);
     }
+
+    @Override
+    public Task linkToWorkspace(Long userId, Long taskId, Long workspaceId) {
+        Task task = getTaskOrThrow(taskId);
+        validateOwnership(userId, task);
+        Workspace workspace = workspaceRepository.findById(workspaceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+        // Validate user owns the workspace too
+        if (!workspace.getAppUser().getId().equals(userId)) {
+            throw new ForbiddenException("Workspace does not belong to this user.");
+        }
+        task.setWorkspace(workspace);
+        return taskRepository.save(task);
+    }
+
+    @Override
+    public Task unlinkFromWorkspace(Long userId, Long taskId) {
+        Task task = getTaskOrThrow(taskId);
+        validateOwnership(userId, task);
+        task.setWorkspace(null);
+        return taskRepository.save(task);
+    }
+
     private void validateTaskDuration(TaskType type, int durationMinutes){
         if(durationMinutes<=0){
             throw new BadRequestException("Duration must be greater than zero.");

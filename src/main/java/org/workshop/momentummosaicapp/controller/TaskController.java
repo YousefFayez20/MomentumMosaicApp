@@ -13,6 +13,7 @@ import org.workshop.momentummosaicapp.task.dto.TaskRequest;
 import org.workshop.momentummosaicapp.task.dto.TaskResponse;
 import org.workshop.momentummosaicapp.user.AppUserPrincipal;
 import org.workshop.momentummosaicapp.utility.DtoMapper;
+import org.workshop.momentummosaicapp.utility.exception.UnauthorizedException;
 
 import java.util.List;
 
@@ -121,5 +122,28 @@ public class TaskController {
         Long userId = ((AppUserPrincipal)authentication.getPrincipal()).getUserId();
         List<Task> tasks = taskService.getCompletedTasks(userId);
         return tasks.stream().map(dtoMapper::taskToTaskResponse).toList();
+    }
+    @PutMapping("/{taskId}/workspace/{workspaceId}")
+    public TaskResponse linkTaskToWorkspace(
+            Authentication authentication,
+            @PathVariable Long taskId,
+            @PathVariable Long workspaceId) {
+        Long userId = extractUserId(authentication);
+        Task task = taskService.linkToWorkspace(userId, taskId, workspaceId);
+        return dtoMapper.taskToTaskResponse(task);
+    }
+    private Long extractUserId(Authentication auth) {
+        if (auth == null || !(auth.getPrincipal() instanceof AppUserPrincipal)) {
+            throw new UnauthorizedException("User not authenticated");
+        }
+        return ((AppUserPrincipal) auth.getPrincipal()).getUserId();
+    }
+    @DeleteMapping("/{taskId}/workspace")
+    public TaskResponse unlinkTaskFromWorkspace(
+            Authentication authentication,
+            @PathVariable Long taskId) {
+        Long userId = extractUserId(authentication);
+        Task task = taskService.unlinkFromWorkspace(userId, taskId);
+        return dtoMapper.taskToTaskResponse(task);
     }
 }

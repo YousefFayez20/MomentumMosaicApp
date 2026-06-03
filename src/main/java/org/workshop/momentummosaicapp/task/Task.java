@@ -9,6 +9,8 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.workshop.momentummosaicapp.user.AppUser;
+import org.workshop.momentummosaicapp.workspace.Workspace;
+
 import java.time.Instant;
 import java.time.LocalDate;
 
@@ -57,6 +59,10 @@ public class Task {
 
     @UpdateTimestamp
     private Instant updatedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "workspace_id")
+    private Workspace workspace;
 
     @PrePersist
     @PreUpdate
