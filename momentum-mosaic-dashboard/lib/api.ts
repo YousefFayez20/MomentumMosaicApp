@@ -295,6 +295,19 @@ export class ApiClient {
       method: "DELETE",
     })
   }
+
+  async addWorkspaceResource(workspaceId: number, data: { url: string; label?: string | null }) {
+    return this.request<WorkspaceResourceResponse>(`/api/workspaces/${workspaceId}/resources`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteWorkspaceResource(workspaceId: number, resourceId: number) {
+    return this.request<void>(`/api/workspaces/${workspaceId}/resources/${resourceId}`, {
+      method: "DELETE",
+    })
+  }
 }
 
 // Types

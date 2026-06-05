@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { AlertCircle, ChevronDown, ChevronRight } from "lucide-react"
+import { ChevronRight, GripVertical, MoreHorizontal, Trash2 } from "lucide-react"
 
 import { apiClient, type ApiError, type WorkspaceEntryResponse, type WorkspaceEntryType } from "@/lib/api"
 import { cn } from "@/lib/utils"
@@ -53,8 +53,7 @@ export function WorkspaceEntryItem({
   const latestRequestTokenRef = useRef(0)
 
   const hasChildren = entry.children.length > 0
-
-  // ── Save state helpers ───────────────────────────────────────────────────
+  const isCollapsed = entry.entryType === "TOGGLE" && entry.collapsed
 
   const syncSaveState = (nextState: EntrySaveState, nextError = "") => {
     setSaveState(nextState)
@@ -133,8 +132,6 @@ export function WorkspaceEntryItem({
     autosaveTimerRef.current = setTimeout(() => void persistDraft(nextDraft), AUTOSAVE_DELAY_MS)
   }
 
-  // ── Sync effects ─────────────────────────────────────────────────────────
-
   useEffect(() => {
     latestDraftRef.current = draft
     resizeTextarea()
@@ -147,7 +144,6 @@ export function WorkspaceEntryItem({
       setDraft(incomingContent)
       latestDraftRef.current = incomingContent
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.content])
 
   useEffect(() => {
@@ -157,27 +153,9 @@ export function WorkspaceEntryItem({
       clearSaveResetTimer()
       onEntrySaveStateChange(entry.id, "idle")
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry.id])
 
-  // ── Event handlers ───────────────────────────────────────────────────────
-
   const handleChange = (nextDraft: string) => {
-    // Slash commands — convert block type and wipe the command text
-    const trimmed = nextDraft.trimStart()
-    if (trimmed.toLowerCase() === "/toggle" && entry.entryType !== "TOGGLE") {
-      setDraft("")
-      latestDraftRef.current = ""
-      onConvertType(entry, "TOGGLE")
-      return
-    }
-    if (trimmed.toLowerCase() === "/bullet" && entry.entryType !== "BULLET") {
-      setDraft("")
-      latestDraftRef.current = ""
-      onConvertType(entry, "BULLET")
-      return
-    }
-
     setDraft(nextDraft)
     latestDraftRef.current = nextDraft
     clearSaveResetTimer()
@@ -195,93 +173,50 @@ export function WorkspaceEntryItem({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
-      // Flush any pending content before spawning next line
       if (saveState === "dirty") void persistDraft()
       if (entry.entryType === "TOGGLE" && !entry.collapsed) {
-        // Enter on an expanded toggle creates a child
         onCreateChild(entry)
       } else {
         onCreateSibling(entry)
       }
+    } else if (e.key === "Tab") {
+      e.preventDefault()
+      if (saveState === "dirty") void persistDraft()
+      onCreateChild(entry)
     } else if (e.key === "Backspace" && draft === "") {
       e.preventDefault()
       onDeleteAndFocusPrevious(entry)
     }
   }
 
-  // Register this textarea with the parent's ref map for focus management
   const setTextareaRef = useCallback(
     (el: HTMLTextAreaElement | null) => {
       textareaRef.current = el
       onRegisterRef(entry.id, el)
     },
-    // entry.id and onRegisterRef are stable; no need to add saveState etc.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [entry.id],
   )
 
-  // ── Render ───────────────────────────────────────────────────────────────
-
   return (
-    <div className="group/entry relative" style={{ marginLeft: `${depth * 20}px` }}>
-      <div className="flex items-start gap-1.5 py-[1px]">
-
-        {/* Left indicator: toggle chevron or bullet dot */}
-        <div className="relative mt-[9px] shrink-0">
+    <div className="group/entry entry-appear" style={{ paddingLeft: `${depth * 20}px` }}>
+      <div className="flex items-start gap-3 py-0.5 -mx-2 px-2 transition-all duration-200 ease-out rounded-lg hover:bg-primary/[0.03] focus-within:bg-primary/[0.05] focus-within:ring-1 focus-within:ring-primary/[0.08]">
+        <div className="mt-[9px] shrink-0">
           {entry.entryType === "TOGGLE" ? (
             <button
               type="button"
               aria-label={entry.collapsed ? "Expand section" : "Collapse section"}
-              className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground/40 transition-colors hover:bg-primary/10 hover:text-primary"
+              className="flex items-center justify-center p-0.5 rounded text-muted-foreground/40 transition-all duration-200 hover:text-muted-foreground/70 hover:bg-black/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20"
               onClick={() => onToggleCollapse(entry, !entry.collapsed)}
             >
-              {entry.collapsed
-                ? <ChevronRight className="h-3.5 w-3.5" />
-                : <ChevronDown className="h-3.5 w-3.5" />
-              }
+              <ChevronRight
+                className={`h-4 w-4 transition-transform duration-200 ease-out ${entry.collapsed ? "" : "rotate-90"}`}
+              />
             </button>
           ) : (
-            <button
-              type="button"
-              aria-label="Change block type"
-              className="flex h-5 w-5 items-center justify-center rounded transition-colors hover:bg-primary/10"
-              onClick={() => setTypeMenuOpen((v) => !v)}
-            >
-              <span className="h-[5px] w-[5px] rounded-full bg-muted-foreground/30 transition-colors group-hover/entry:bg-muted-foreground/50" />
-            </button>
-          )}
-
-          {/* Type-switch mini popover */}
-          {typeMenuOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setTypeMenuOpen(false)} />
-              <div className="absolute left-6 top-0 z-20 overflow-hidden rounded-lg border border-white/50 bg-white/90 shadow-lg backdrop-blur dark:border-white/10 dark:bg-zinc-900/95">
-                {(["BULLET", "TOGGLE"] as WorkspaceEntryType[]).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium transition-colors hover:bg-primary/10",
-                      entry.entryType === type ? "text-primary" : "text-muted-foreground",
-                    )}
-                    onClick={() => {
-                      setTypeMenuOpen(false)
-                      if (entry.entryType !== type) onConvertType(entry, type)
-                    }}
-                  >
-                    {type === "BULLET"
-                      ? <span className="h-[5px] w-[5px] rounded-full bg-current" />
-                      : <ChevronRight className="h-3 w-3" />
-                    }
-                    {type === "BULLET" ? "Bullet" : "Toggle"}
-                  </button>
-                ))}
-              </div>
-            </>
+            <span className="block h-[5px] w-[5px] rounded-full bg-primary/50" />
           )}
         </div>
 
-        {/* Textarea — the only surface the user interacts with */}
         <div className="relative min-w-0 flex-1">
           <textarea
             ref={setTextareaRef}
@@ -293,23 +228,15 @@ export function WorkspaceEntryItem({
             onBlur={() => {
               if (saveState === "dirty" || saveState === "error") void persistDraft()
             }}
-            className={cn(
-              "w-full resize-none bg-transparent py-1 text-sm leading-6 text-on-surface outline-none placeholder:text-muted-foreground/25",
-              entry.entryType === "TOGGLE" && "font-semibold",
-            )}
-            placeholder={entry.entryType === "TOGGLE" ? "Section heading…" : ""}
+            className="w-full resize-none overflow-hidden bg-transparent text-[15.5px] leading-[1.75] font-[410] text-foreground/90 focus:outline-none placeholder:text-muted-foreground/30 tracking-[-0.01em]"
           />
 
-          {/* Error state — tiny, out of the way, only appears on actual error */}
           {saveState === "error" && (
-            <div
-              title={errorMessage}
-              className="absolute right-0 top-2 flex items-center gap-1 text-destructive"
-            >
-              <AlertCircle className="h-3 w-3" />
+            <div className="mt-1 flex items-center gap-2">
+              <span className="text-[11px] text-muted-foreground/50">Unable to sync.</span>
               <button
                 type="button"
-                className="text-[10px] underline"
+                className="text-[11px] text-primary/60 underline transition-colors hover:text-primary"
                 onClick={() => void persistDraft()}
               >
                 Retry
@@ -318,20 +245,69 @@ export function WorkspaceEntryItem({
           )}
         </div>
 
-        {/* Hover-reveal delete × — for mouse users, completely invisible otherwise */}
-        <button
-          type="button"
-          aria-label="Delete line"
-          className="mt-[9px] shrink-0 text-[16px] leading-none text-muted-foreground/0 transition-colors group-hover/entry:text-muted-foreground/25 hover:!text-destructive"
-          onClick={() => onDelete(entry)}
-        >
-          ×
-        </button>
+        <div className="relative mt-[9px] flex items-center gap-1 opacity-0 transition-opacity duration-300 group-hover/entry:opacity-100 focus-within:opacity-100">
+          <button
+            type="button"
+            className="p-1 text-muted-foreground/30 transition-colors duration-200 hover:text-muted-foreground/60 rounded-md hover:bg-black/[0.04]"
+            tabIndex={-1}
+            aria-label="Drag to reorder"
+          >
+            <GripVertical className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            className="p-1 text-muted-foreground/30 transition-colors duration-200 hover:text-destructive rounded-md hover:bg-black/[0.04]"
+            tabIndex={-1}
+            aria-label="Delete line"
+            onClick={() => onDelete(entry)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+          <div className="relative">
+            <button
+              type="button"
+              className="p-1 text-muted-foreground/30 transition-colors duration-200 hover:text-muted-foreground/60 rounded-md hover:bg-black/[0.04]"
+              tabIndex={-1}
+              aria-label="More options"
+              onClick={() => setTypeMenuOpen((v) => !v)}
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </button>
+
+            {typeMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setTypeMenuOpen(false)} />
+                <div className="absolute right-0 top-full z-20 mt-1.5 overflow-hidden rounded-xl border border-black/[0.06] bg-white/95 shadow-xl shadow-black/[0.08] backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/95 min-w-[130px] py-1 animate-in fade-in-0 zoom-in-95 duration-150">
+                  {(["BULLET", "TOGGLE"] as WorkspaceEntryType[]).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      className={cn(
+                        "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium transition-colors hover:bg-primary/10",
+                        entry.entryType === type ? "text-primary" : "text-muted-foreground",
+                      )}
+                      onClick={() => {
+                        setTypeMenuOpen(false)
+                        if (entry.entryType !== type) onConvertType(entry, type)
+                      }}
+                    >
+                      {type === "BULLET" ? (
+                        <span className="h-1 w-1 rounded-full bg-current" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3" />
+                      )}
+                      {type === "BULLET" ? "Bullet" : "Toggle"}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Children of a TOGGLE — rendered flush, no card wrapping */}
-      {entry.entryType === "TOGGLE" && !entry.collapsed && hasChildren && (
-        <div className="border-l border-muted-foreground/10 pl-1">
+      {!isCollapsed && hasChildren && (
+        <div>
           {entry.children.map((childEntry) => (
             <WorkspaceEntryItem
               key={childEntry.id}

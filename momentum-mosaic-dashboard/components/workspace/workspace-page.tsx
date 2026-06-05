@@ -4,18 +4,21 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   AlertCircle,
-  BookOpenText,
+  BookOpen,
   Brain,
   ChevronRight,
   Clock,
   ExternalLink,
-  FileText,
+  Figma,
+  Github,
+  Globe,
   Info,
-  Link2,
   Menu,
-  Plus,
+  MessageSquare,
   RefreshCw,
-  Video,
+  Trash2,
+  Youtube,
+  Plus,
 } from "lucide-react"
 
 import {
@@ -52,6 +55,7 @@ import {
   type WorkspaceSummaryResponse,
 } from "@/lib/api"
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog"
+import { AddResourceDialog } from "@/components/workspace/add-resource-dialog"
 import { cn } from "@/lib/utils"
 import { WorkspaceEntryItem, type EntrySaveState } from "@/components/workspace/workspace-entry-item"
 
@@ -158,16 +162,18 @@ function getWorkspaceGroups(
   return groupedSections
 }
 
-function getResourceIcon(resource: WorkspaceResourceResponse) {
-  switch (resource.resourceType) {
-    case "VIDEO":
-      return Video
-    case "PDF":
-    case "DOC":
-      return FileText
-    default:
-      return Link2
+function getSiteIcon(url: string) {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase()
+    if (hostname.includes("youtube.com")) return Youtube
+    if (hostname.includes("github.com")) return Github
+    if (hostname.includes("medium.com")) return BookOpen
+    if (hostname.includes("figma.com")) return Figma
+    if (hostname.includes("stackoverflow.com")) return MessageSquare
+  } catch {
+    // invalid URL
   }
+  return Globe
 }
 
 function formatTaskStatus(task: TaskResponse) {
@@ -368,6 +374,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
   const [workspaceData, setWorkspaceData] = useState<WorkspaceLoadState | null>(null)
   const [navigationOpen, setNavigationOpen] = useState(false)
   const [contextOpen, setContextOpen] = useState(false)
+  const [resourceDialogOpen, setResourceDialogOpen] = useState(false)
   const [pendingNavigationTarget, setPendingNavigationTarget] = useState<string | null>(null)
   const [entrySaveStates, setEntrySaveStates] = useState<Record<number, EntrySaveState>>({})
   const [actionError, setActionError] = useState("")
@@ -422,14 +429,6 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
       Object.values(entrySaveStates).some((state) =>
         state === "dirty" || state === "saving" || state === "error",
       ),
-    [entrySaveStates],
-  )
-
-  const activePendingCount = useMemo(
-    () =>
-      Object.values(entrySaveStates).filter(
-        (state) => state === "dirty" || state === "saving" || state === "error",
-      ).length,
     [entrySaveStates],
   )
 
@@ -594,6 +593,26 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
     }
   }
 
+  const handleDeleteResource = async (resourceId: number) => {
+    try {
+      setActionError("")
+      await apiClient.deleteWorkspaceResource(workspaceId, resourceId)
+      setWorkspaceData((current) => {
+        if (!current) return current
+        return {
+          ...current,
+          workspace: {
+            ...current.workspace,
+            resources: current.workspace.resources.filter((r) => r.id !== resourceId),
+          },
+        }
+      })
+    } catch (error) {
+      const apiError = error as ApiError
+      setActionError(apiError.message || "Could not delete resource.")
+    }
+  }
+
   // Keyboard Backspace on empty line: no confirmation, focus previous textarea by DOM order
   const handleDeleteAndFocusPrevious = async (entry: WorkspaceEntryResponse) => {
     // Find the textarea that comes before this one in DOM order, then focus it
@@ -684,7 +703,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
   const navigationSurface = (
     <div className="flex h-full flex-col">
       <div className="border-b border-white/40 px-5 py-4 dark:border-white/5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/60">
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">
           Study Workspace
         </p>
         <h2 className="mt-2 text-lg font-black tracking-tight text-primary">One calm place to work</h2>
@@ -693,7 +712,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
       <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
         {workspaceGroups.map((group) => (
           <section key={group.id} className="space-y-2">
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/55">
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">
               {group.label}
             </h3>
             <div className="space-y-1.5">
@@ -719,7 +738,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                     className={cn(
                       "h-auto w-full items-start justify-between rounded-2xl px-3 py-3 text-left",
                       isActive
-                        ? "bg-primary/8 text-primary hover:bg-primary/10"
+                        ? "bg-primary/[0.06] text-primary hover:bg-primary/[0.08] relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-primary/60"
                         : "text-muted-foreground hover:bg-white/60 hover:text-primary dark:hover:bg-white/[0.04]",
                       isWorking && !isActive && "text-primary bg-primary/5"
                     )}
@@ -746,11 +765,18 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
 
   const contextSurface = (
     <div className="flex h-full flex-col">
-      <div className="border-b border-white/40 px-5 py-4 dark:border-white/5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/60">
-          Session Context
-        </p>
-        <h2 className="mt-2 text-lg font-black tracking-tight text-primary">Keep the block intact</h2>
+      <div className="flex items-center justify-between border-b border-white/40 px-5 py-4 dark:border-white/5">
+        <h2 className="text-lg font-black tracking-tight text-primary">Resources</h2>
+        <button 
+          type="button"
+          className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+          onClick={(e) => {
+            e.preventDefault()
+            setResourceDialogOpen(true)
+          }}
+        >
+          <Plus className="h-4 w-4 text-primary/70" />
+        </button>
       </div>
 
       <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
@@ -774,45 +800,67 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
         </section>
 
         <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <BookOpenText className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-bold text-primary">Context Resources</h3>
-          </div>
-
           {workspace && workspace.resources.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-1">
               {workspace.resources
                 .slice()
                 .sort(compareByOrderIndex)
                 .map((resource) => {
-                  const ResourceIcon = getResourceIcon(resource)
+                  const SiteIcon = getSiteIcon(resource.url)
+                  let displayTitle = resource.label
+                  if (!displayTitle) {
+                    try {
+                      displayTitle = new URL(resource.url).hostname.replace(/^www\./, '')
+                    } catch {
+                      displayTitle = "Link"
+                    }
+                  }
+                  
                   return (
                     <a
                       key={resource.id}
                       href={resource.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-start gap-3 rounded-2xl border border-white/50 bg-white/70 p-4 transition hover:border-primary/20 hover:bg-primary/5 dark:border-white/5 dark:bg-white/[0.03]"
+                      className="group flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-[background] duration-150 ease-in-out hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
                     >
-                      <span className="mt-0.5 rounded-full bg-primary/8 p-2 text-primary">
-                        <ResourceIcon className="h-4 w-4" />
+                      <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                        <SiteIcon className="h-4 w-4 text-muted-foreground/70" />
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold text-primary">
-                          {resource.label || resource.url}
-                        </span>
-                        <span className="mt-1 block truncate text-[11px] font-medium text-muted-foreground">
-                          {resource.url}
-                        </span>
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-primary/80">
+                        {displayTitle}
                       </span>
-                      <ExternalLink className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 hover:text-primary transition-colors" />
+                        <button
+                          type="button"
+                          className="flex items-center justify-center rounded-sm p-0.5 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            void handleDeleteResource(resource.id)
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground/50 hover:text-destructive transition-colors" />
+                        </button>
+                      </span>
                     </a>
                   )
                 })}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/50 bg-white/60 p-4 text-sm text-muted-foreground dark:border-white/10 dark:bg-white/[0.03]">
-              No context resources are attached to this workspace yet.
+            <div className="px-1 py-2">
+              <p className="text-[13px] font-medium text-primary/80">No resources yet.</p>
+              <button 
+                type="button"
+                className="mt-2.5 flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground/80 hover:text-primary transition-colors"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setResourceDialogOpen(true)
+                }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add your first resource</span>
+              </button>
             </div>
           )}
         </section>
@@ -847,14 +895,14 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                   </aside>
                 )}
 
-                <section className="min-w-0 space-y-5">
-                  <div className="rounded-3xl border border-white/50 bg-white/70 p-5 shadow-sm backdrop-blur dark:border-white/5 dark:bg-white/[0.03]">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
+                <section className="min-w-0 bg-card rounded-3xl border border-black/[0.04] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_32px_rgba(0,0,0,0.03)] dark:border-white/[0.04]">
+                  <div className="px-6 pt-6 pb-6 min-h-[40vh]">
+                    <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
                       <div className="min-w-0">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/60">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">
                           {workspace.sectionName || "Study Workspace"}
                         </p>
-                        <h1 className="mt-2 truncate text-4xl font-black tracking-tight text-primary">
+                        <h1 className="mt-1.5 truncate text-2xl font-bold tracking-tight text-foreground/85">
                           {workspace.title}
                         </h1>
                       </div>
@@ -883,75 +931,71 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                       )}
                     </div>
 
-                    {(hasPendingChanges || actionError) && (
-                      <div className="mt-4 flex flex-wrap items-center gap-2">
-                        {hasPendingChanges && (
-                          <span className="rounded-full bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
-                            {activePendingCount} change{activePendingCount === 1 ? "" : "s"} still settling
-                          </span>
-                        )}
-                        {actionError && (
-                          <span className="rounded-full bg-destructive/10 px-3 py-1 text-xs font-semibold text-destructive">
-                            {actionError}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Writing surface — no toolbar, cursor is the primary interaction */}
-                  <div
-                    className="min-h-[40vh] py-2 pb-32"
-                    // Clicking dead space below entries creates a new line
-                    onClick={(e) => {
-                      if (e.target === e.currentTarget) {
-                        void handleCreateEntry(null, "BULLET")
-                      }
-                    }}
-                  >
-                    {workspace.entries.length > 0 ? (
-                      workspace.entries
-                        .slice()
-                        .sort(compareByOrderIndex)
-                        .map((entry) => (
-                          <WorkspaceEntryItem
-                            key={entry.id}
-                            workspaceId={workspaceId}
-                            entry={entry}
-                            depth={0}
-                            onEntrySaved={handleEntrySaved}
-                            onEntrySaveStateChange={setEntrySaveState}
-                            onCreateSibling={(sourceEntry) =>
-                              void handleCreateEntry(sourceEntry.parentEntryId, sourceEntry.entryType)
-                            }
-                            onCreateChild={(sourceEntry) => void handleCreateEntry(sourceEntry.id, "BULLET")}
-                            onDelete={(sourceEntry) => void handleDeleteEntry(sourceEntry)}
-                            onDeleteAndFocusPrevious={(sourceEntry) => void handleDeleteAndFocusPrevious(sourceEntry)}
-                            onToggleCollapse={(sourceEntry, nextCollapsed) =>
-                              void handleToggleCollapse(sourceEntry, nextCollapsed)
-                            }
-                            onConvertType={(sourceEntry, newType) => void handleConvertType(sourceEntry, newType)}
-                            onRegisterRef={registerEntryRef}
-                          />
-                        ))
-                    ) : (
-                      // Empty state: subtle, not instructional. Click anywhere to begin.
-                      <div
-                        className="cursor-text py-2"
-                        onClick={() => void handleCreateEntry(null, "BULLET")}
-                      >
-                        <p className="select-none text-sm text-muted-foreground/30">Click to start writing…</p>
+                    {actionError && (
+                      <div className="mb-4">
+                        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-destructive/70">
+                          <span className="h-1.5 w-1.5 rounded-full bg-destructive/50" />
+                          {actionError}
+                        </span>
                       </div>
                     )}
 
-                    {/* Clickable trailing area so users can always add below the last line */}
-                    {workspace.entries.length > 0 && (
-                      <div
-                        className="mt-2 h-16 cursor-text"
-                        onClick={() => void handleCreateEntry(null, "BULLET")}
-                        aria-hidden="true"
-                      />
-                    )}
+                    {/* Writing surface — no toolbar, cursor is the primary interaction */}
+                    <div
+                      className="study-surface-gradient rounded-xl px-6 py-5"
+                      onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                          void handleCreateEntry(null, "BULLET")
+                        }
+                      }}
+                    >
+                      {workspace.entries.length > 0 ? (
+                        <div className="space-y-0">
+                          {workspace.entries
+                            .slice()
+                            .sort(compareByOrderIndex)
+                            .map((entry) => (
+                              <WorkspaceEntryItem
+                                key={entry.id}
+                                workspaceId={workspaceId}
+                                entry={entry}
+                                depth={0}
+                                onEntrySaved={handleEntrySaved}
+                                onEntrySaveStateChange={setEntrySaveState}
+                                onCreateSibling={(sourceEntry) =>
+                                  void handleCreateEntry(sourceEntry.parentEntryId, sourceEntry.entryType)
+                                }
+                                onCreateChild={(sourceEntry) => void handleCreateEntry(sourceEntry.id, "BULLET")}
+                                onDelete={(sourceEntry) => void handleDeleteEntry(sourceEntry)}
+                                onDeleteAndFocusPrevious={(sourceEntry) => void handleDeleteAndFocusPrevious(sourceEntry)}
+                                onToggleCollapse={(sourceEntry, nextCollapsed) =>
+                                  void handleToggleCollapse(sourceEntry, nextCollapsed)
+                                }
+                                onConvertType={(sourceEntry, newType) => void handleConvertType(sourceEntry, newType)}
+                                onRegisterRef={registerEntryRef}
+                              />
+                            ))}
+                        </div>
+                      ) : (
+                        <div
+                          className="flex flex-col items-start py-6 cursor-text"
+                          onClick={() => void handleCreateEntry(null, "BULLET")}
+                        >
+                          <p className="text-[15px] text-muted-foreground/30 select-none font-[410]">Start writing...</p>
+                        </div>
+                      )}
+
+                      {/* Clickable trailing area so users can always add below the last line */}
+                      {workspace.entries.length > 0 && (
+                        <div
+                          className="group/trail mt-2 h-20 cursor-text flex items-start justify-start pl-[29px] pt-2"
+                          onClick={() => void handleCreateEntry(null, "BULLET")}
+                          aria-hidden="true"
+                        >
+                          <span className="h-[5px] w-[5px] rounded-full bg-primary/0 transition-colors duration-300 group-hover/trail:bg-primary/15" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </section>
 
@@ -1013,6 +1057,24 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+
+            <AddResourceDialog 
+              open={resourceDialogOpen}
+              onOpenChange={setResourceDialogOpen}
+              workspaceId={workspaceId}
+              onSuccess={(resource) => {
+                setWorkspaceData((current) => {
+                  if (!current) return current
+                  return {
+                    ...current,
+                    workspace: {
+                      ...current.workspace,
+                      resources: [...current.workspace.resources, resource],
+                    },
+                  }
+                })
+              }}
+            />
           </>
         ) : null}
       </DashboardLayout>
