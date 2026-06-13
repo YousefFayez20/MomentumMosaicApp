@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   AlertCircle,
@@ -13,14 +13,19 @@ import {
   Github,
   Globe,
   Info,
+  Maximize2,
   Menu,
   MessageSquare,
+  Minimize2,
   RefreshCw,
   Trash2,
   Youtube,
   Plus,
+  Play,
 } from "lucide-react"
 
+import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,6 +61,8 @@ import {
 } from "@/lib/api"
 import { CreateWorkspaceDialog } from "@/components/workspace/create-workspace-dialog"
 import { AddResourceDialog } from "@/components/workspace/add-resource-dialog"
+import { SectionManagementPopover } from "@/components/workspace/section-management-popover"
+import { WorkspaceSettingsPopover } from "@/components/workspace/workspace-settings-popover"
 import { cn } from "@/lib/utils"
 import { WorkspaceEntryItem, type EntrySaveState } from "@/components/workspace/workspace-entry-item"
 
@@ -73,7 +80,28 @@ type WorkspaceLoadState = {
 type WorkspaceGroup = {
   id: string
   label: string
+  sectionId: number | null   // null means the "Unsectioned" synthetic group
   workspaces: WorkspaceSummaryResponse[]
+}
+
+const COLLAPSED_SECTIONS_KEY = "mm_collapsed_sections"
+
+function getCollapsedSections(): Set<string> {
+  if (typeof window === "undefined") return new Set()
+  try {
+    const raw = localStorage.getItem(COLLAPSED_SECTIONS_KEY)
+    return raw ? new Set<string>(JSON.parse(raw)) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+function saveCollapsedSections(collapsed: Set<string>): void {
+  try {
+    localStorage.setItem(COLLAPSED_SECTIONS_KEY, JSON.stringify([...collapsed]))
+  } catch {
+    // ignore
+  }
 }
 
 function compareByOrderIndex<T extends { orderIndex: number | null }>(left: T, right: T) {
@@ -141,20 +169,29 @@ function getWorkspaceGroups(
   sections: WorkspaceSectionResponse[],
   workspaces: WorkspaceSummaryResponse[],
 ): WorkspaceGroup[] {
+  // In sectioned mode: show ALL sections (including empty ones) + unsectioned group
+  // In flat mode (no sections): return a single synthetic group with all workspaces
+  if (sections.length === 0) {
+    return workspaces.length > 0
+      ? [{ id: "section-flat", label: "", sectionId: null, workspaces }]
+      : []
+  }
+
   const groupedSections = [...sections]
     .sort(compareByOrderIndex)
     .map((section) => ({
       id: `section-${section.id}`,
       label: section.name,
+      sectionId: section.id,
       workspaces: workspaces.filter((workspace) => workspace.sectionId === section.id),
     }))
-    .filter((group) => group.workspaces.length > 0)
 
   const unsectioned = workspaces.filter((workspace) => workspace.sectionId === null)
   if (unsectioned.length > 0) {
     groupedSections.push({
-      id: "section-open",
-      label: "Open Workspaces",
+      id: "section-unsectioned",
+      label: "Unsectioned",
+      sectionId: null,
       workspaces: unsectioned,
     })
   }
@@ -176,6 +213,34 @@ function getSiteIcon(url: string) {
   return Globe
 }
 
+function getYoutubeVideoId(url: string): string | null {
+  try {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  } catch {
+    return null;
+  }
+}
+
+function FaviconWithFallback({ url, hostname, className }: { url: string; hostname: string; className?: string }) {
+  const [error, setError] = useState(false)
+  const SiteIcon = getSiteIcon(url)
+
+  if (error) {
+    return <SiteIcon className="h-4 w-4 text-muted-foreground/70" />
+  }
+
+  return (
+    <img
+      src={`https://www.google.com/s2/favicons?sz=64&domain=${hostname}`}
+      alt={hostname}
+      className={cn("h-4 w-4 object-contain", className)}
+      onError={() => setError(true)}
+    />
+  )
+}
+
 function formatTaskStatus(task: TaskResponse) {
   switch (task.status) {
     case "IN_PROGRESS":
@@ -194,12 +259,12 @@ function FocusTaskCard({ task, onUpdate }: { task: TaskResponse; onUpdate: () =>
   useEffect(() => {
     if (task.status !== "IN_PROGRESS" || !task.startedAt) return
     const started = new Date(task.startedAt).getTime()
-    
+
     const updateTimer = () => {
       const now = new Date().getTime()
       setElapsed(Math.max(0, Math.floor((now - started) / 60000)))
     }
-    
+
     updateTimer()
     const interval = setInterval(updateTimer, 60000)
     return () => clearInterval(interval)
@@ -222,12 +287,12 @@ function FocusTaskCard({ task, onUpdate }: { task: TaskResponse; onUpdate: () =>
   return (
     <div className={cn(
       "rounded-2xl border p-4 shadow-sm transition-colors",
-      task.status === "IN_PROGRESS" 
-        ? "border-primary/40 bg-primary/5 dark:bg-primary/10 shadow-[0_0_15px_rgba(172,206,197,0.15)]" 
+      task.status === "IN_PROGRESS"
+        ? "border-primary/40 bg-primary/5 dark:bg-primary/10 shadow-[0_0_15px_rgba(172,206,197,0.15)]"
         : "border-white/50 bg-white/70 dark:border-white/5 dark:bg-white/[0.03]"
     )}>
       <p className="text-sm font-semibold text-primary">{task.title}</p>
-      
+
       <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-medium text-muted-foreground">
         <span className={cn(
           "rounded-full px-2.5 py-1",
@@ -245,9 +310,9 @@ function FocusTaskCard({ task, onUpdate }: { task: TaskResponse; onUpdate: () =>
 
       <div className="mt-3 flex flex-wrap gap-2">
         {task.status === "PLANNED" && (
-          <Button 
-            size="sm" 
-            className="w-full rounded-full" 
+          <Button
+            size="sm"
+            className="w-full rounded-full"
             onClick={() => handleAction("start")}
             disabled={loading}
           >
@@ -256,18 +321,18 @@ function FocusTaskCard({ task, onUpdate }: { task: TaskResponse; onUpdate: () =>
         )}
         {task.status === "IN_PROGRESS" && (
           <>
-            <Button 
-              size="sm" 
-              className="flex-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white" 
+            <Button
+              size="sm"
+              className="flex-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white"
               onClick={() => handleAction("complete")}
               disabled={loading}
             >
               Complete
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="outline"
-              className="flex-1 rounded-full" 
+              className="flex-1 rounded-full"
               onClick={() => handleAction("abandon")}
               disabled={loading}
             >
@@ -350,15 +415,15 @@ export function WorkspaceHomePage() {
                 Create Workspace
               </Button>
             </div>
-            ) : null}
-            <CreateWorkspaceDialog
-              open={createDialogOpen}
-              onOpenChange={setCreateDialogOpen}
-              sections={sections}
-              onSuccess={(workspace) => {
-                router.replace(`/workspace/${workspace.id}`)
-              }}
-            />
+          ) : null}
+          <CreateWorkspaceDialog
+            open={createDialogOpen}
+            onOpenChange={setCreateDialogOpen}
+            sections={sections}
+            onSuccess={(workspace) => {
+              router.replace(`/workspace/${workspace.id}`)
+            }}
+          />
         </div>
       </DashboardLayout>
     </AuthGuard>
@@ -378,10 +443,24 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
   const [pendingNavigationTarget, setPendingNavigationTarget] = useState<string | null>(null)
   const [entrySaveStates, setEntrySaveStates] = useState<Record<number, EntrySaveState>>({})
   const [actionError, setActionError] = useState("")
+  const [activeVideoId, setActiveVideoId] = useState<string | null>(null)
+  const [deepWritingMode, setDeepWritingMode] = useState(false)
+  const [isExitingDeepMode, setIsExitingDeepMode] = useState(false)
+  const [topbarVisible, setTopbarVisible] = useState(true)
+  // Section collapse state — persisted to localStorage
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(getCollapsedSections)
+  // Inline new-section creation in sidebar
+  const [newSectionMode, setNewSectionMode] = useState(false)
+  const [newSectionDraft, setNewSectionDraft] = useState("")
+  // Sidebar "New Workspace" dialog (separate from any existing top-level dialog)
+  const [createDialogOpenNav, setCreateDialogOpenNav] = useState(false)
 
   const restoreFocusRef = useRef<HTMLElement | null>(null)
   // Map of entryId -> textarea element, used for programmatic focus
   const entryRefsMap = useRef<Map<number, HTMLTextAreaElement>>(new Map())
+  const topbarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const deepWriteScrollRef = useRef<HTMLDivElement | null>(null)
+  const newSectionInputRef = useRef<HTMLInputElement | null>(null)
 
   const focusEntryById = (entryId: number) => {
     // Use both the ref map (for already-mounted entries) and a DOM query
@@ -432,6 +511,19 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
     [entrySaveStates],
   )
 
+  const isSectionedMode = (workspaceData?.sections.length ?? 0) > 0
+
+  // -- Section collapse toggle --
+  const toggleSectionCollapsed = (groupId: string) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev)
+      if (next.has(groupId)) next.delete(groupId)
+      else next.add(groupId)
+      saveCollapsedSections(next)
+      return next
+    })
+  }
+
   const loadWorkspace = async () => {
     try {
       setLoading(true)
@@ -466,6 +558,154 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
     }
   }
 
+  // -- Section management handlers --
+  const handleRenameSection = async (sectionId: number, newName: string) => {
+    try {
+      const updated = await apiClient.updateSection(sectionId, { name: newName })
+      setWorkspaceData((cur) => {
+        if (!cur) return cur
+        return {
+          ...cur,
+          sections: cur.sections.map((s) => (s.id === sectionId ? { ...s, name: updated.name } : s)),
+          // Also update sectionName on any workspace summaries referencing this section
+          workspaces: cur.workspaces.map((w) =>
+            w.sectionId === sectionId ? { ...w, sectionName: updated.name } : w,
+          ),
+        }
+      })
+    } catch (err) {
+      const apiError = err as ApiError
+      setActionError(apiError.message || "Could not rename section.")
+    }
+  }
+
+  const handleDeleteSection = async (sectionId: number) => {
+    try {
+      await apiClient.deleteSection(sectionId)
+      setWorkspaceData((cur) => {
+        if (!cur) return cur
+        return {
+          ...cur,
+          sections: cur.sections.filter((s) => s.id !== sectionId),
+          // Move affected workspaces to unsectioned
+          workspaces: cur.workspaces.map((w) =>
+            w.sectionId === sectionId ? { ...w, sectionId: null, sectionName: null } : w,
+          ),
+        }
+      })
+    } catch (err) {
+      const apiError = err as ApiError
+      setActionError(apiError.message || "Could not delete section.")
+    }
+  }
+
+  const handleCreateSection = async () => {
+    const trimmed = newSectionDraft.trim()
+    if (!trimmed) { setNewSectionMode(false); return }
+    try {
+      const section = await apiClient.createSection({ name: trimmed })
+      setWorkspaceData((cur) => {
+        if (!cur) return cur
+        return { ...cur, sections: [...cur.sections, section] }
+      })
+    } catch (err) {
+      const apiError = err as ApiError
+      setActionError(apiError.message || "Could not create section.")
+    } finally {
+      setNewSectionMode(false)
+      setNewSectionDraft("")
+    }
+  }
+
+  // -- Workspace management handlers --
+  const handleRenameWorkspace = async (wsId: number, newTitle: string) => {
+    try {
+      await apiClient.updateWorkspace(wsId, { title: newTitle })
+      setWorkspaceData((cur) => {
+        if (!cur) return cur
+        const updatedWorkspaces = cur.workspaces.map((w) =>
+          w.id === wsId ? { ...w, title: newTitle } : w,
+        )
+        // Also patch the active workspace if it's the current one
+        const updatedWorkspace =
+          cur.workspace.id === wsId ? { ...cur.workspace, title: newTitle } : cur.workspace
+        return { ...cur, workspaces: updatedWorkspaces, workspace: updatedWorkspace }
+      })
+    } catch (err) {
+      const apiError = err as ApiError
+      setActionError(apiError.message || "Could not rename workspace.")
+    }
+  }
+
+  const handleMoveWorkspaceToSection = async (wsId: number, sectionId: number | null) => {
+    try {
+      const payload = sectionId === null ? { clearSection: true } : { sectionId }
+      await apiClient.updateWorkspace(wsId, payload)
+      setWorkspaceData((cur) => {
+        if (!cur) return cur
+        const sectionName = sectionId
+          ? (cur.sections.find((s) => s.id === sectionId)?.name ?? null)
+          : null
+        return {
+          ...cur,
+          workspaces: cur.workspaces.map((w) =>
+            w.id === wsId ? { ...w, sectionId, sectionName } : w,
+          ),
+          workspace:
+            cur.workspace.id === wsId
+              ? { ...cur.workspace, sectionId, sectionName }
+              : cur.workspace,
+        }
+      })
+    } catch (err) {
+      const apiError = err as ApiError
+      setActionError(apiError.message || "Could not move workspace.")
+    }
+  }
+
+  const handleArchiveWorkspace = async (wsId: number) => {
+    try {
+      await apiClient.updateWorkspace(wsId, { archived: true })
+      setWorkspaceData((cur) => {
+        if (!cur) return cur
+        return { ...cur, workspaces: cur.workspaces.filter((w) => w.id !== wsId) }
+      })
+      // If archiving the currently viewed workspace, navigate away
+      if (wsId === workspaceId) {
+        const remaining = workspaceData?.workspaces.filter((w) => w.id !== wsId)
+        if (remaining && remaining.length > 0) {
+          router.push(`/workspace/${remaining[0].id}`)
+        } else {
+          router.push("/workspace")
+        }
+      }
+    } catch (err) {
+      const apiError = err as ApiError
+      setActionError(apiError.message || "Could not archive workspace.")
+    }
+  }
+
+  const handleDeleteWorkspace = async (wsId: number) => {
+    try {
+      await apiClient.deleteWorkspace(wsId)
+      const remaining = workspaceData?.workspaces.filter((w) => w.id !== wsId)
+      setWorkspaceData((cur) => {
+        if (!cur) return cur
+        return { ...cur, workspaces: cur.workspaces.filter((w) => w.id !== wsId) }
+      })
+      if (wsId === workspaceId) {
+        if (remaining && remaining.length > 0) {
+          router.push(`/workspace/${remaining[0].id}`)
+        } else {
+          router.push("/workspace")
+        }
+      }
+    } catch (err) {
+      const apiError = err as ApiError
+      setActionError(apiError.message || "Could not delete workspace.")
+    }
+  }
+
   useEffect(() => {
     void loadWorkspace()
   }, [workspaceId])
@@ -481,6 +721,71 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
     window.addEventListener("beforeunload", handleBeforeUnload)
     return () => window.removeEventListener("beforeunload", handleBeforeUnload)
   }, [hasPendingChanges])
+
+  // Deep Writing Mode: Escape to exit + Collapse/Expand all shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && deepWritingMode && !isExitingDeepMode) {
+        handleExitDeepMode()
+      }
+      // Ctrl+Shift+C — collapse all toggles
+      if (e.key === "C" && e.ctrlKey && e.shiftKey && !e.altKey) {
+        e.preventDefault()
+        void handleCollapseAll(true)
+      }
+      // Ctrl+Shift+E — expand all toggles
+      if (e.key === "E" && e.ctrlKey && e.shiftKey && !e.altKey) {
+        e.preventDefault()
+        void handleCollapseAll(false)
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [deepWritingMode, isExitingDeepMode, workspaceData])
+
+  // Auto-hide topbar during typing in Deep Writing Mode
+  useEffect(() => {
+    if (!deepWritingMode) return
+
+    const resetTopbarTimer = () => {
+      setTopbarVisible(true)
+      if (topbarTimerRef.current) clearTimeout(topbarTimerRef.current)
+      topbarTimerRef.current = setTimeout(() => setTopbarVisible(false), 3000)
+    }
+
+    const handleMouseMove = () => {
+      setTopbarVisible(true)
+      if (topbarTimerRef.current) clearTimeout(topbarTimerRef.current)
+      topbarTimerRef.current = setTimeout(() => setTopbarVisible(false), 3000)
+    }
+
+    const handleKeyPress = () => {
+      // Hide topbar immediately on typing
+      if (topbarTimerRef.current) clearTimeout(topbarTimerRef.current)
+      topbarTimerRef.current = setTimeout(() => setTopbarVisible(false), 1500)
+    }
+
+    // Start visible, then fade
+    resetTopbarTimer()
+    window.addEventListener("mousemove", handleMouseMove)
+    window.addEventListener("keydown", handleKeyPress)
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove)
+      window.removeEventListener("keydown", handleKeyPress)
+      if (topbarTimerRef.current) clearTimeout(topbarTimerRef.current)
+    }
+  }, [deepWritingMode])
+
+  const handleExitDeepMode = useCallback(() => {
+    if (isExitingDeepMode) return
+    setIsExitingDeepMode(true)
+    // Wait for exit animation before unmounting
+    setTimeout(() => {
+      setDeepWritingMode(false)
+      setIsExitingDeepMode(false)
+      setTopbarVisible(true)
+    }, 250)
+  }, [isExitingDeepMode])
 
   const captureRestoreTarget = () => {
     const activeElement = document.activeElement
@@ -554,6 +859,22 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
     entryType: WorkspaceEntryType,
     content = "",
   ) => {
+    // Optimistic creation — instant UI, background API
+    const tempId = -Date.now()
+    const optimisticEntry: WorkspaceEntryResponse = {
+      id: tempId,
+      parentEntryId,
+      entryType,
+      content,
+      collapsed: false,
+      orderIndex: Number.MAX_SAFE_INTEGER,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      children: [],
+    }
+    patchWorkspaceEntries((entries) => appendEntryToTree(entries, parentEntryId, optimisticEntry))
+    focusEntryById(tempId)
+
     try {
       setActionError("")
       const nextEntry = await apiClient.createWorkspaceEntry(workspaceId, {
@@ -562,11 +883,17 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
         content,
       })
 
-      patchWorkspaceEntries((entries) => appendEntryToTree(entries, parentEntryId, nextEntry))
-      // Focus the newly created textarea after React re-renders
+      // Replace optimistic entry with the real one
+      patchWorkspaceEntries((entries) => {
+        const withoutTemp = removeEntryFromTree(entries, tempId)
+        return appendEntryToTree(withoutTemp, parentEntryId, nextEntry)
+      })
+      // Re-register focus to the real entry
       focusEntryById(nextEntry.id)
     } catch (error) {
       const apiError = error as ApiError
+      // Remove the optimistic entry on failure
+      patchWorkspaceEntries((entries) => removeEntryFromTree(entries, tempId))
       setActionError(apiError.message || "Could not add an entry.")
     }
   }
@@ -663,6 +990,38 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
     }
   }
 
+  // Collapse or expand all toggle entries
+  const handleCollapseAll = async (collapse: boolean) => {
+    if (!workspaceData) return
+    const collectToggles = (entries: WorkspaceEntryResponse[]): WorkspaceEntryResponse[] => {
+      const result: WorkspaceEntryResponse[] = []
+      for (const entry of entries) {
+        if (entry.entryType === "TOGGLE" && entry.collapsed !== collapse) {
+          result.push(entry)
+        }
+        if (entry.children.length > 0) {
+          result.push(...collectToggles(entry.children))
+        }
+      }
+      return result
+    }
+    const toggles = collectToggles(workspaceData.workspace.entries)
+    if (toggles.length === 0) return
+
+    // Optimistic: update all at once
+    for (const toggle of toggles) {
+      patchWorkspaceEntries((entries) =>
+        replaceEntryInTree(entries, { ...toggle, collapsed: collapse })
+      )
+    }
+    // Fire API calls in parallel
+    await Promise.allSettled(
+      toggles.map((toggle) =>
+        apiClient.updateWorkspaceEntry(workspaceId, toggle.id, { collapsed: collapse })
+      )
+    )
+  }
+
   const handleToggleCollapse = async (entry: WorkspaceEntryResponse, nextCollapsed: boolean) => {
     patchWorkspaceEntries((entries) =>
       replaceEntryInTree(entries, {
@@ -702,6 +1061,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
 
   const navigationSurface = (
     <div className="flex h-full flex-col">
+      {/* Header */}
       <div className="border-b border-white/40 px-5 py-4 dark:border-white/5">
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">
           Study Workspace
@@ -709,57 +1069,224 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
         <h2 className="mt-2 text-lg font-black tracking-tight text-primary">One calm place to work</h2>
       </div>
 
-      <div className="flex-1 space-y-5 overflow-y-auto px-5 py-5">
-        {workspaceGroups.map((group) => (
-          <section key={group.id} className="space-y-2">
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">
-              {group.label}
-            </h3>
-            <div className="space-y-1.5">
-              {group.workspaces.map((groupWorkspace) => {
-                const isActive = groupWorkspace.id === workspaceId
-                const isWorking = workspaceData?.tasks.some(t => t.workspaceId === groupWorkspace.id && t.status === "IN_PROGRESS")
-                return (
-                  <Button
-                    key={groupWorkspace.id}
-                    type="button"
-                    variant="ghost"
-                    onClick={() => {
-                      if (groupWorkspace.id === workspaceId) {
-                        setNavigationOpen(false)
-                        return
-                      }
+      {/* Workspace list */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        {workspaceGroups.length === 0 && (
+          <p className="px-1 text-[13px] text-muted-foreground/50">No workspaces yet.</p>
+        )}
 
-                      const href = `/workspace/${groupWorkspace.id}`
-                      if (handleWorkspaceNavigation(href)) {
-                        router.push(href)
-                      }
-                    }}
-                    className={cn(
-                      "h-auto w-full items-start justify-between rounded-2xl px-3 py-3 text-left",
-                      isActive
-                        ? "bg-primary/[0.06] text-primary hover:bg-primary/[0.08] relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-primary/60"
-                        : "text-muted-foreground hover:bg-white/60 hover:text-primary dark:hover:bg-white/[0.04]",
-                      isWorking && !isActive && "text-primary bg-primary/5"
-                    )}
+        {workspaceGroups.map((group) => {
+          const isCollapsed = collapsedSections.has(group.id)
+          const showHeader = isSectionedMode && group.label !== ""
+          const isUnsectioned = group.id === "section-unsectioned"
+
+          return (
+            <section key={group.id} className="mb-4">
+              {/* Section header (only in sectioned mode, not for flat mode) */}
+              {showHeader && (
+                <div className="group/section mb-1 flex items-center justify-between gap-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleSectionCollapsed(group.id)}
+                    className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
                   >
-                    <span className="min-w-0">
-                      <span className="truncate text-sm font-semibold flex items-center gap-2">
-                        {groupWorkspace.title}
-                        {isWorking && <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />}
-                      </span>
-                      <span className="block pt-1 text-[11px] font-medium text-muted-foreground/70">
-                        {formatUpdatedAt(groupWorkspace.lastActiveAt)}
-                      </span>
-                    </span>
-                    <ChevronRight className="mt-0.5 h-4 w-4 shrink-0" />
-                  </Button>
-                )
-              })}
-            </div>
-          </section>
-        ))}
+                    <ChevronRight
+                      className={cn(
+                        "h-3 w-3 shrink-0 text-muted-foreground/40 transition-transform duration-200",
+                        !isCollapsed && "rotate-90",
+                      )}
+                    />
+                    <h3 className="truncate text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">
+                      {group.label}
+                    </h3>
+                  </button>
+
+                  {/* Section management — only real sections (not "Unsectioned" synthetic group) */}
+                  {!isUnsectioned && group.sectionId !== null && (
+                    <div className="shrink-0 opacity-0 transition-opacity duration-150 group-hover/section:opacity-100">
+                      <SectionManagementPopover
+                        sectionId={group.sectionId}
+                        sectionName={group.label}
+                        onRename={handleRenameSection}
+                        onDelete={handleDeleteSection}
+                      />
+                    </div>
+                  )}
+                  {isUnsectioned && (
+                    <span className="shrink-0 text-[10px] text-muted-foreground/30">—</span>
+                  )}
+                </div>
+              )}
+
+              {/* Workspace list (hidden when section is collapsed) */}
+              {!isCollapsed && (
+                <div className="space-y-1">
+                  {group.workspaces.length === 0 && showHeader && (
+                    <p className="px-2 py-1.5 text-[12px] text-muted-foreground/40 italic">
+                      No workspaces yet
+                    </p>
+                  )}
+                  {group.workspaces.map((groupWorkspace) => {
+                    const isActive = groupWorkspace.id === workspaceId
+                    const isWorking = workspaceData?.tasks.some(
+                      (t) => t.workspaceId === groupWorkspace.id && t.status === "IN_PROGRESS",
+                    )
+                    return (
+                      <div key={groupWorkspace.id} className="group/ws relative flex items-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (groupWorkspace.id === workspaceId) {
+                              setNavigationOpen(false)
+                              return
+                            }
+                            const href = `/workspace/${groupWorkspace.id}`
+                            if (handleWorkspaceNavigation(href)) {
+                              router.push(href)
+                            }
+                          }}
+                          className={cn(
+                            "flex min-w-0 flex-1 items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left transition-all duration-150",
+                            isActive
+                              ? "bg-primary/[0.08] text-primary relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-primary/70"
+                              : "text-muted-foreground hover:bg-white/60 hover:text-primary dark:hover:bg-white/[0.04]",
+                            isWorking && !isActive && "text-primary bg-primary/5",
+                          )}
+                        >
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center gap-2 truncate text-sm font-semibold">
+                              {groupWorkspace.title}
+                              {isWorking && (
+                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary animate-pulse" />
+                              )}
+                            </span>
+                            <span className="block pt-0.5 text-[11px] font-medium text-muted-foreground/60">
+                              {formatUpdatedAt(groupWorkspace.lastActiveAt)}
+                            </span>
+                          </span>
+                        </button>
+
+                        {/* Per-workspace settings popover (visible on hover) */}
+                        <div className={cn(
+                          "absolute right-1.5 shrink-0 opacity-0 transition-opacity duration-150",
+                          "group-hover/ws:opacity-100",
+                          isActive && "opacity-100",
+                        )}>
+                          <WorkspaceSettingsPopover
+                            workspaceId={groupWorkspace.id}
+                            workspaceTitle={groupWorkspace.title}
+                            currentSectionId={groupWorkspace.sectionId}
+                            sections={workspaceData?.sections ?? []}
+                            onRename={handleRenameWorkspace}
+                            onMoveToSection={handleMoveWorkspaceToSection}
+                            onArchive={handleArchiveWorkspace}
+                            onDelete={handleDeleteWorkspace}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </section>
+          )
+        })}
       </div>
+
+      {/* Sidebar footer: New Workspace + section actions */}
+      <div className="border-t border-white/40 px-4 py-3 dark:border-white/5 space-y-1.5">
+        <button
+          type="button"
+          onClick={() => setCreateDialogOpenNav(true)}
+          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground/60 transition-colors hover:bg-primary/[0.06] hover:text-primary"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          New Workspace
+        </button>
+
+        {/* In flat mode: "Organize into Sections" affordance */}
+        {!isSectionedMode && (
+          <button
+            type="button"
+            onClick={() => {
+              setNewSectionMode(true)
+              requestAnimationFrame(() => newSectionInputRef.current?.focus())
+            }}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground/40 transition-colors hover:bg-black/[0.03] hover:text-muted-foreground/70 dark:hover:bg-white/[0.04]"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Organize into Sections
+          </button>
+        )}
+
+        {/* In sectioned mode: "New Section" button */}
+        {isSectionedMode && (
+          <button
+            type="button"
+            onClick={() => {
+              setNewSectionMode(true)
+              requestAnimationFrame(() => newSectionInputRef.current?.focus())
+            }}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground/40 transition-colors hover:bg-black/[0.03] hover:text-muted-foreground/70 dark:hover:bg-white/[0.04]"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            New Section
+          </button>
+        )}
+
+        {/* Inline new-section input */}
+        {newSectionMode && (
+          <div className="flex items-center gap-1.5 px-1">
+            <input
+              ref={newSectionInputRef}
+              type="text"
+              value={newSectionDraft}
+              maxLength={100}
+              placeholder="Section name…"
+              onChange={(e) => setNewSectionDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleCreateSection()
+                if (e.key === "Escape") {
+                  setNewSectionMode(false)
+                  setNewSectionDraft("")
+                }
+              }}
+              onBlur={() => {
+                // Small delay so clicking "Save" doesn't fire blur before click
+                setTimeout(() => {
+                  setNewSectionMode(false)
+                  setNewSectionDraft("")
+                }, 150)
+              }}
+              className="flex-1 rounded-lg border border-black/[0.08] bg-white/80 px-2.5 py-1.5 text-[13px] font-medium text-primary placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-white/10 dark:bg-white/[0.06]"
+              autoFocus
+            />
+          </div>
+        )}
+      </div>
+
+      {/* CreateWorkspaceDialog wired to sidebar footer button */}
+      <CreateWorkspaceDialog
+        open={createDialogOpenNav}
+        onOpenChange={setCreateDialogOpenNav}
+        sections={workspaceData?.sections ?? []}
+        onSuccess={(ws) => {
+          setWorkspaceData((cur) => {
+            if (!cur) return cur
+            const summary = {
+              id: ws.id,
+              title: ws.title,
+              sectionId: ws.sectionId,
+              sectionName: ws.sectionName,
+              lastActiveAt: ws.lastActiveAt,
+              createdAt: ws.createdAt,
+            }
+            return { ...cur, workspaces: [...cur.workspaces, summary] }
+          })
+          setCreateDialogOpenNav(false)
+          router.push(`/workspace/${ws.id}`)
+        }}
+      />
     </div>
   )
 
@@ -767,7 +1294,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-white/40 px-5 py-4 dark:border-white/5">
         <h2 className="text-lg font-black tracking-tight text-primary">Resources</h2>
-        <button 
+        <button
           type="button"
           className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
           onClick={(e) => {
@@ -780,6 +1307,190 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
       </div>
 
       <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
+        {/* Resources section */}
+        <section className="space-y-3">
+          {workspace && workspace.resources.length > 0 ? (
+            <div className="space-y-3">
+              {workspace.resources
+                .slice()
+                .sort(compareByOrderIndex)
+                .map((resource) => {
+                  const videoId = getYoutubeVideoId(resource.url)
+                  const isYoutube = videoId !== null
+                  let displayTitle = resource.label
+                  if (!displayTitle) {
+                    try {
+                      displayTitle = new URL(resource.url).hostname.replace(/^www\./, '')
+                    } catch {
+                      displayTitle = "Link"
+                    }
+                  }
+
+                  let hostname = ""
+                  try {
+                    hostname = new URL(resource.url).hostname.replace(/^www\./, '')
+                  } catch {
+                    hostname = "Link"
+                  }
+
+                  const standardCard = (
+                    <div className="group relative flex items-center justify-between overflow-hidden rounded-2xl border border-black/[0.04] bg-white/40 shadow-sm backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-md dark:border-white/[0.04] dark:bg-white/[0.02] dark:hover:bg-white/[0.04]">
+                      <a
+                        href={resource.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex flex-1 items-center gap-3 p-2.5 min-w-0"
+                      >
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/[0.05] dark:bg-white/[0.05]">
+                          <FaviconWithFallback url={resource.url} hostname={hostname} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="truncate text-xs font-semibold text-primary/95 group-hover:text-primary transition-colors">
+                            {displayTitle}
+                          </h4>
+                          <span className="block pt-0.5 text-[10px] font-medium text-muted-foreground/60 truncate">
+                            {hostname}
+                          </span>
+                        </div>
+                      </a>
+
+                      <div className="pr-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        {isYoutube && (
+                          <button
+                            type="button"
+                            className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-red-500"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              setActiveVideoId(videoId)
+                            }}
+                          >
+                            <Play className="h-3.5 w-3.5 fill-current" />
+                          </button>
+                        )}
+                        <a
+                          href={resource.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary transition-colors" />
+                        </a>
+                        <button
+                          type="button"
+                          className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            void handleDeleteResource(resource.id)
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-destructive transition-colors" />
+                        </button>
+                      </div>
+                    </div>
+                  )
+
+                  return (
+                    <HoverCard key={resource.id} openDelay={300} closeDelay={150}>
+                      <HoverCardTrigger asChild>
+                        {/* We wrap in a div so the HoverCard trigger works correctly over the whole row */}
+                        <div>{standardCard}</div>
+                      </HoverCardTrigger>
+                      <HoverCardContent side="left" align="start" sideOffset={12} className="w-72 p-3 overflow-hidden rounded-2xl shadow-xl dark:bg-zinc-950/95 dark:backdrop-blur-md">
+                        {isYoutube ? (
+                          <div className="space-y-3">
+                            <div
+                              className="relative aspect-video w-full overflow-hidden rounded-xl cursor-pointer shadow-sm border border-black/5 dark:border-white/5"
+                              onClick={() => setActiveVideoId(videoId)}
+                            >
+                              <img
+                                src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
+                                alt={displayTitle}
+                                className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                              />
+                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center transition-colors hover:bg-black/30">
+                                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-md backdrop-blur-sm">
+                                  <Play className="h-4.5 w-4.5 text-red-600 fill-red-600 ml-0.5" />
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <h4 className="line-clamp-3 text-[13px] font-semibold text-primary/95 leading-snug">{displayTitle}</h4>
+                              <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                                <Youtube className="h-3.5 w-3.5 text-red-500" />
+                                YouTube Video
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2.5">
+                            <h4 className="line-clamp-4 text-[13px] font-semibold text-primary/90 leading-snug">{displayTitle}</h4>
+                            
+                            {(() => {
+                                const lower = hostname.toLowerCase();
+                                let BadgeIcon = null;
+                                let badgeText = "";
+                                let badgeClass = "";
+                                
+                                if (lower.includes("chatgpt.com") || lower.includes("claude.ai") || lower.includes("perplexity.ai")) {
+                                  BadgeIcon = Brain;
+                                  badgeText = "AI Assistant";
+                                  badgeClass = "bg-purple-500/10 text-purple-600 dark:text-purple-400";
+                                } else if (lower.includes("github.com") || lower.includes("stackoverflow.com")) {
+                                  BadgeIcon = Github;
+                                  badgeText = "Development";
+                                  badgeClass = "bg-blue-500/10 text-blue-600 dark:text-blue-400";
+                                } else if (lower.includes("figma.com") || lower.includes("dribbble.com")) {
+                                  BadgeIcon = Figma;
+                                  badgeText = "Design";
+                                  badgeClass = "bg-pink-500/10 text-pink-600 dark:text-pink-400";
+                                } else if (lower.includes("medium.com")) {
+                                  BadgeIcon = BookOpen;
+                                  badgeText = "Article";
+                                  badgeClass = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+                                }
+                                
+                                if (BadgeIcon) {
+                                  return (
+                                    <div className="flex items-center">
+                                      <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider", badgeClass)}>
+                                        <BadgeIcon className="h-3 w-3" /> {badgeText}
+                                      </span>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                            })()}
+
+                            <div className="flex items-start gap-2 text-[11px] text-muted-foreground break-all whitespace-normal bg-muted/30 p-2 rounded-lg">
+                              <FaviconWithFallback url={resource.url} hostname={hostname} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                              <span className="opacity-80 line-clamp-3 leading-relaxed">{resource.url}</span>
+                            </div>
+                          </div>
+                        )}
+                      </HoverCardContent>
+                    </HoverCard>
+                  )
+                })}
+            </div>
+          ) : (
+            <div className="px-1 py-2">
+              <p className="text-[13px] font-medium text-primary/80">No resources yet.</p>
+              <button
+                type="button"
+                className="mt-2.5 flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground/80 hover:text-primary transition-colors"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setResourceDialogOpen(true)
+                }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add your first resource</span>
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* Linked DEEP commitment — below resources for calm context */}
         <section className="space-y-3">
           <div className="flex items-center gap-2">
             <Brain className="h-4 w-4 text-primary" />
@@ -795,72 +1506,6 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
           ) : (
             <div className="rounded-2xl border border-dashed border-white/50 bg-white/60 p-4 text-sm text-muted-foreground dark:border-white/10 dark:bg-white/[0.03]">
               No DEEP task is linked to this workspace yet.
-            </div>
-          )}
-        </section>
-
-        <section className="space-y-3">
-          {workspace && workspace.resources.length > 0 ? (
-            <div className="space-y-1">
-              {workspace.resources
-                .slice()
-                .sort(compareByOrderIndex)
-                .map((resource) => {
-                  const SiteIcon = getSiteIcon(resource.url)
-                  let displayTitle = resource.label
-                  if (!displayTitle) {
-                    try {
-                      displayTitle = new URL(resource.url).hostname.replace(/^www\./, '')
-                    } catch {
-                      displayTitle = "Link"
-                    }
-                  }
-                  
-                  return (
-                    <a
-                      key={resource.id}
-                      href={resource.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="group flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-[background] duration-150 ease-in-out hover:bg-black/[0.03] dark:hover:bg-white/[0.03]"
-                    >
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-                        <SiteIcon className="h-4 w-4 text-muted-foreground/70" />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-primary/80">
-                        {displayTitle}
-                      </span>
-                      <span className="flex items-center gap-1 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
-                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/50 hover:text-primary transition-colors" />
-                        <button
-                          type="button"
-                          className="flex items-center justify-center rounded-sm p-0.5 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            void handleDeleteResource(resource.id)
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground/50 hover:text-destructive transition-colors" />
-                        </button>
-                      </span>
-                    </a>
-                  )
-                })}
-            </div>
-          ) : (
-            <div className="px-1 py-2">
-              <p className="text-[13px] font-medium text-primary/80">No resources yet.</p>
-              <button 
-                type="button"
-                className="mt-2.5 flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground/80 hover:text-primary transition-colors"
-                onClick={(e) => {
-                  e.preventDefault()
-                  setResourceDialogOpen(true)
-                }}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>Add your first resource</span>
-              </button>
             </div>
           )}
         </section>
@@ -895,7 +1540,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                   </aside>
                 )}
 
-                <section className="min-w-0 bg-card rounded-3xl border border-black/[0.04] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_32px_rgba(0,0,0,0.03)] dark:border-white/[0.04]">
+                <section className="relative min-w-0 bg-card rounded-3xl border border-black/[0.04] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_32px_rgba(0,0,0,0.03)] dark:border-white/[0.04]">
                   <div className="px-6 pt-6 pb-6 min-h-[40vh]">
                     <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
                       <div className="min-w-0">
@@ -907,28 +1552,51 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                         </h1>
                       </div>
 
-                      {isMobile && (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="rounded-full bg-white/80"
-                            onClick={() => handleNavigationSheetChange(true)}
-                          >
-                            <Menu className="mr-2 h-4 w-4" />
-                            Workspaces
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="rounded-full bg-white/80"
-                            onClick={() => handleContextSheetChange(true)}
-                          >
-                            <Info className="mr-2 h-4 w-4" />
-                            Context
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {isMobile ? (
+                          <>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="rounded-full bg-white/80"
+                              onClick={() => handleNavigationSheetChange(true)}
+                            >
+                              <Menu className="mr-2 h-4 w-4" />
+                              Workspaces
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="rounded-full bg-white/80"
+                              onClick={() => handleContextSheetChange(true)}
+                            >
+                              <Info className="mr-2 h-4 w-4" />
+                              Context
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <WorkspaceSettingsPopover
+                              workspaceId={workspace.id}
+                              workspaceTitle={workspace.title}
+                              currentSectionId={workspace.sectionId}
+                              sections={workspaceData?.sections ?? []}
+                              onRename={handleRenameWorkspace}
+                              onMoveToSection={handleMoveWorkspaceToSection}
+                              onArchive={handleArchiveWorkspace}
+                              onDelete={handleDeleteWorkspace}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setDeepWritingMode(true)}
+                              className="flex h-8 w-8 items-center justify-center rounded-xl transition-all duration-200 text-muted-foreground/40 hover:text-muted-foreground/70 hover:bg-black/[0.03] dark:hover:bg-white/[0.06]"
+                              title="Enter deep writing"
+                            >
+                              <Maximize2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     {actionError && (
@@ -981,14 +1649,14 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                           className="flex flex-col items-start py-6 cursor-text"
                           onClick={() => void handleCreateEntry(null, "BULLET")}
                         >
-                          <p className="text-[15px] text-muted-foreground/30 select-none font-[410]">Start writing...</p>
+                          <p className="text-[15px] text-muted-foreground/25 select-none font-normal">Start thinking...</p>
                         </div>
                       )}
 
                       {/* Clickable trailing area so users can always add below the last line */}
                       {workspace.entries.length > 0 && (
                         <div
-                          className="group/trail mt-2 h-20 cursor-text flex items-start justify-start pl-[29px] pt-2"
+                          className="group/trail mt-2 h-32 cursor-text flex items-start justify-start pl-[29px] pt-2"
                           onClick={() => void handleCreateEntry(null, "BULLET")}
                           aria-hidden="true"
                         >
@@ -1058,7 +1726,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
               </AlertDialogContent>
             </AlertDialog>
 
-            <AddResourceDialog 
+            <AddResourceDialog
               open={resourceDialogOpen}
               onOpenChange={setResourceDialogOpen}
               workspaceId={workspaceId}
@@ -1075,9 +1743,119 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                 })
               }}
             />
+
+            <Dialog open={activeVideoId !== null} onOpenChange={(open) => !open && setActiveVideoId(null)}>
+              <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black aspect-video rounded-3xl border-none">
+                {activeVideoId && (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${activeVideoId}?autoplay=1`}
+                    title="YouTube Video Player"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full border-none"
+                  />
+                )}
+              </DialogContent>
+            </Dialog>
           </>
         ) : null}
       </DashboardLayout>
+
+      {/* ─── Deep Writing Mode — Fullscreen Overlay ──── */}
+      {(deepWritingMode || isExitingDeepMode) && workspace && (
+        <div
+          className={cn(
+            "deep-writing-overlay",
+            isExitingDeepMode && "deep-writing-overlay--exiting"
+          )}
+        >
+          {/* Auto-hiding topbar */}
+          <div
+            className={cn(
+              "deep-writing-topbar",
+              !topbarVisible && !isExitingDeepMode && "deep-writing-topbar--hidden"
+            )}
+          >
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/40">
+                {workspace.sectionName || "Study Workspace"}
+              </p>
+              <h2 className="mt-0.5 truncate text-base font-bold tracking-tight text-foreground/60">
+                {workspace.title}
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={handleExitDeepMode}
+              className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground/40 transition-all duration-200 hover:text-muted-foreground/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+              title="Exit deep writing"
+            >
+              <Minimize2 className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Scrollable writing surface */}
+          <div className="deep-writing-scroll" ref={deepWriteScrollRef}>
+            <div className="deep-writing-column">
+              <div
+                className="py-4"
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    void handleCreateEntry(null, "BULLET")
+                  }
+                }}
+              >
+                {workspace.entries.length > 0 ? (
+                  <div className="space-y-0">
+                    {workspace.entries
+                      .slice()
+                      .sort(compareByOrderIndex)
+                      .map((entry) => (
+                        <WorkspaceEntryItem
+                          key={entry.id}
+                          workspaceId={workspaceId}
+                          entry={entry}
+                          depth={0}
+                          onEntrySaved={handleEntrySaved}
+                          onEntrySaveStateChange={setEntrySaveState}
+                          onCreateSibling={(sourceEntry) =>
+                            void handleCreateEntry(sourceEntry.parentEntryId, sourceEntry.entryType)
+                          }
+                          onCreateChild={(sourceEntry) => void handleCreateEntry(sourceEntry.id, "BULLET")}
+                          onDelete={(sourceEntry) => void handleDeleteEntry(sourceEntry)}
+                          onDeleteAndFocusPrevious={(sourceEntry) => void handleDeleteAndFocusPrevious(sourceEntry)}
+                          onToggleCollapse={(sourceEntry, nextCollapsed) =>
+                            void handleToggleCollapse(sourceEntry, nextCollapsed)
+                          }
+                          onConvertType={(sourceEntry, newType) => void handleConvertType(sourceEntry, newType)}
+                          onRegisterRef={registerEntryRef}
+                        />
+                      ))}
+                  </div>
+                ) : (
+                  <div
+                    className="flex flex-col items-start py-6 cursor-text"
+                    onClick={() => void handleCreateEntry(null, "BULLET")}
+                  >
+                    <p className="text-[15px] text-muted-foreground/25 select-none font-normal">Start thinking...</p>
+                  </div>
+                )}
+
+                {/* Generous trailing click area */}
+                {workspace.entries.length > 0 && (
+                  <div
+                    className="group/trail mt-2 h-[40vh] cursor-text flex items-start justify-start pl-[29px] pt-2"
+                    onClick={() => void handleCreateEntry(null, "BULLET")}
+                    aria-hidden="true"
+                  >
+                    <span className="h-[5px] w-[5px] rounded-full bg-primary/0 transition-colors duration-300 group-hover/trail:bg-primary/15" />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AuthGuard>
   )
 }
