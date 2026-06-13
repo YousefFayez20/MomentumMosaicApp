@@ -28,4 +28,6 @@ public class TaskRequest {
     private Integer durationMinutes;
 
     private LocalDate plannedForDate;
+
+    private Long workspaceId;
 }

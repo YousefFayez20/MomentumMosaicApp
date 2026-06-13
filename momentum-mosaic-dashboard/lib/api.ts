@@ -177,6 +177,7 @@ export class ApiClient {
       taskType: "DEEP" | "SHALLOW" | "FITNESS"
       durationMinutes: number
       plannedForDate?: string | null
+      workspaceId?: number | null
     },
   ) {
     return this.request<TaskResponse>(`/api/tasks`, {
@@ -192,6 +193,7 @@ export class ApiClient {
       taskType?: "DEEP" | "SHALLOW" | "FITNESS"
       durationMinutes?: number
       plannedForDate?: string | null
+      workspaceId?: number | null
     },
   ) {
     return this.request<TaskResponse>(`/api/tasks/${taskId}`, {
@@ -232,9 +234,33 @@ export class ApiClient {
     return [...active, ...completed]
   }
 
+  // ---- Workspace Section endpoints ----
+
   async getWorkspaceSections() {
     return this.request<WorkspaceSectionResponse[]>(`/api/workspaces/sections`)
   }
+
+  async createSection(data: { name: string; orderIndex?: number | null }) {
+    return this.request<WorkspaceSectionResponse>(`/api/workspaces/sections`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateSection(sectionId: number, data: { name: string; orderIndex?: number | null }) {
+    return this.request<WorkspaceSectionResponse>(`/api/workspaces/sections/${sectionId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteSection(sectionId: number) {
+    return this.request<void>(`/api/workspaces/sections/${sectionId}`, {
+      method: "DELETE",
+    })
+  }
+
+  // ---- Workspace endpoints ----
 
   async getWorkspaces() {
     return this.request<WorkspaceSummaryResponse[]>(`/api/workspaces`)
@@ -244,7 +270,6 @@ export class ApiClient {
     return this.request<WorkspaceResponse>(`/api/workspaces/${workspaceId}`)
   }
 
-  // New: create workspace (optional section)
   async createWorkspace(data: { title: string; sectionId?: number | null }) {
     return this.request<WorkspaceResponse>(`/api/workspaces`, {
       method: "POST",
@@ -252,14 +277,28 @@ export class ApiClient {
     })
   }
 
-  // New: create a new section
-  async createSection(data: { name: string; orderIndex?: number | null }) {
-    // Section DTO matches WorkspaceSectionResponse shape
-    return this.request<WorkspaceSectionResponse>(`/api/workspaces/sections`, {
-      method: "POST",
+  async updateWorkspace(
+    workspaceId: number,
+    data: {
+      title?: string
+      sectionId?: number | null
+      clearSection?: boolean
+      archived?: boolean
+    },
+  ) {
+    return this.request<WorkspaceResponse>(`/api/workspaces/${workspaceId}`, {
+      method: "PUT",
       body: JSON.stringify(data),
     })
   }
+
+  async deleteWorkspace(workspaceId: number) {
+    return this.request<void>(`/api/workspaces/${workspaceId}`, {
+      method: "DELETE",
+    })
+  }
+
+  // ---- Workspace Entry endpoints ----
 
   async createWorkspaceEntry(
     workspaceId: number,
@@ -292,6 +331,31 @@ export class ApiClient {
 
   async deleteWorkspaceEntry(workspaceId: number, entryId: number) {
     return this.request<void>(`/api/workspaces/${workspaceId}/entries/${entryId}`, {
+      method: "DELETE",
+    })
+  }
+
+  async reorderEntries(
+    workspaceId: number,
+    reorderList: { entryId: number; orderIndex: number }[],
+  ) {
+    return this.request<void>(`/api/workspaces/${workspaceId}/entries/reorder`, {
+      method: "PUT",
+      body: JSON.stringify(reorderList),
+    })
+  }
+
+  // ---- Workspace Resource endpoints ----
+
+  async addWorkspaceResource(workspaceId: number, data: { url: string; label?: string | null }) {
+    return this.request<WorkspaceResourceResponse>(`/api/workspaces/${workspaceId}/resources`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteWorkspaceResource(workspaceId: number, resourceId: number) {
+    return this.request<void>(`/api/workspaces/${workspaceId}/resources/${resourceId}`, {
       method: "DELETE",
     })
   }

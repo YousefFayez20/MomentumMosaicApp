@@ -203,7 +203,6 @@ function ContributorRow({
   const colors = CONTRIBUTOR_CONFIG[colorKey]
   const isEmpty = percent === 0
   const isFull = percent >= 100
-  const isActive = percent > 0 && percent < 100
 
   return (
     <div className={`relative flex items-start gap-3 ${!isLast ? 'pb-4' : ''}`}>
@@ -220,34 +219,26 @@ function ContributorRow({
       {/* Row content */}
       <div className="flex-1 min-w-0 pt-0.5 space-y-1.5">
         <div className="flex items-center justify-between gap-2">
-          <span className={`text-[10.5px] font-bold tracking-wide transition-colors duration-500 ${isEmpty ? 'text-muted-foreground/35' : colors.text}`}>
+          <span className={`text-xs font-bold tracking-wide transition-colors duration-500 ${isEmpty ? 'text-muted-foreground/35' : colors.text}`}>
             {label}
           </span>
-          <span className={`text-[11px] font-black font-mono tabular-nums transition-colors duration-500 ${isEmpty ? 'text-muted-foreground/25' : isFull ? colors.text : 'text-primary/70 dark:text-primary/60'}`}>
+          <span className={`text-xs font-black font-mono tabular-nums transition-colors duration-500 ${isEmpty ? 'text-muted-foreground/25' : isFull ? colors.text : 'text-primary/70 dark:text-primary/60'}`}>
             {percent}%
           </span>
         </div>
 
         {/* Weighted progress bar */}
-        <div className={`relative w-full overflow-hidden rounded-full ${barHeight} ${isEmpty ? 'bg-muted/15 dark:bg-muted/10' : colors.bg} transition-all duration-500`}>
+        <div className={`relative w-full overflow-hidden rounded-sm ${barHeight} ${isEmpty ? 'bg-muted/15 dark:bg-muted/10' : colors.bg} transition-all duration-500`}>
           <motion.div
-            className={`absolute left-0 top-0 h-full rounded-full bg-gradient-to-r ${colors.bar}`}
+            className={`absolute left-0 top-0 h-full rounded-sm bg-gradient-to-r ${colors.bar}`}
             initial={{ width: 0 }}
             animate={{ width: `${Math.min(100, percent)}%` }}
             transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
           />
-          {/* Active shimmer for in-progress bars */}
-          {isActive && percent >= 25 && (
-            <motion.div
-              className="absolute top-0 left-0 h-full w-8 bg-gradient-to-r from-transparent via-white/35 to-transparent"
-              animate={{ x: ['-100%', '800%'] }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1.5 }}
-            />
-          )}
         </div>
 
         {/* Sub-metric */}
-        <p className={`text-[9px] font-medium transition-colors duration-500 ${isEmpty ? 'text-muted-foreground/25' : 'text-muted-foreground/55'}`}>
+        <p className={`text-xs font-medium transition-colors duration-500 ${isEmpty ? 'text-muted-foreground/25' : 'text-muted-foreground/55'}`}>
           {subtext}
         </p>
       </div>
@@ -284,40 +275,29 @@ function NextMilestone({
   })()
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-white/40 dark:border-white/5 bg-gradient-to-br from-white/30 to-white/10 dark:from-white/[0.03] dark:to-transparent p-3.5 space-y-2.5">
-      {/* Ambient glow behind the milestone bar */}
-      <div className={`absolute -bottom-4 -right-4 h-20 w-20 rounded-full blur-2xl opacity-30 ${stateMeta.glowClassName}`} />
-
+    <div className="workspace-context-card relative overflow-hidden rounded-lg p-3.5 space-y-2.5">
       <div className="relative flex items-center justify-between gap-2">
-        <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">Next Milestone</span>
-        <span className="text-[9.5px] font-black text-muted-foreground/60">{milestonePercent}%</span>
+        <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">Next Milestone</span>
+        <span className="text-xs font-black text-muted-foreground/60">{milestonePercent}%</span>
       </div>
 
       {/* State label */}
-      <p className="relative text-[11px] font-bold text-primary/75 dark:text-primary/65 leading-snug">
+      <p className="relative text-xs font-bold text-primary/75 dark:text-primary/65 leading-snug">
         {next.label}
       </p>
 
       {/* Milestone progress bar */}
-      <div className="relative h-[5px] w-full overflow-hidden rounded-full bg-primary/[0.04] dark:bg-white/[0.04] border border-white/20 dark:border-white/5">
+      <div className="relative h-[5px] w-full overflow-hidden rounded-sm bg-primary/[0.04] dark:bg-white/[0.04] border border-border/40">
         <motion.div
-          className={`absolute left-0 top-0 h-full rounded-full bg-gradient-to-r ${stateMeta.barClassName} milestone-progress`}
+          className={`absolute left-0 top-0 h-full rounded-sm bg-gradient-to-r ${stateMeta.barClassName} milestone-progress`}
           initial={{ width: 0 }}
           animate={{ width: `${milestonePercent}%` }}
           transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
         />
-        {/* Flowing shimmer */}
-        {milestonePercent > 10 && (
-          <motion.div
-            className="absolute top-0 left-0 h-full w-10 bg-gradient-to-r from-transparent via-white/40 to-transparent"
-            animate={{ x: ['-100%', '900%'] }}
-            transition={{ duration: 2.8, repeat: Infinity, ease: 'linear', repeatDelay: 0.8 }}
-          />
-        )}
       </div>
 
       {/* Nudge text */}
-      <p className="relative text-[9px] font-medium text-muted-foreground/50 leading-relaxed">
+      <p className="relative text-xs font-medium text-muted-foreground/50 leading-relaxed">
         {nudge}
       </p>
     </div>
@@ -365,30 +345,23 @@ function MomentumRhythm({
   const flowSubtext = TREND_LABELS[summary.trend]
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/50 bg-white/35 p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] backdrop-blur-md dark:border-white/5 dark:bg-muted/[0.04]">
-      {/* Ambient rhythm glow */}
-      <div className={`absolute -right-8 -top-8 h-32 w-32 rounded-full blur-3xl opacity-40 ${stateMeta.glowClassName}`} />
-      <div className={`absolute -left-8 -bottom-8 h-24 w-24 rounded-full blur-2xl opacity-30 ${stateMeta.glowClassName}`} />
-
+    <div className="workspace-context-card relative overflow-hidden rounded-xl p-5">
       <div className="relative space-y-5">
 
         {/* ── Section A: Header ── */}
         <div className="flex items-start justify-between gap-3 border-b border-border/10 pb-4">
           <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2">
-                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-35 ${stateMeta.dotClassName}`} />
-                <span className={`relative inline-flex h-2 w-2 rounded-full ${stateMeta.dotClassName}`} />
-              </span>
-              <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground/55">
+              <span className={`h-2 w-2 rounded-full ${stateMeta.dotClassName}`} />
+              <span className="text-xs font-semibold text-muted-foreground">
                 Daily Rhythm
               </span>
             </div>
-            <h3 className="text-[17px] font-black leading-tight tracking-tight text-primary">
+            <h3 className="text-base font-semibold leading-tight tracking-tight text-foreground">
               {summary.displayLabel}
             </h3>
           </div>
-          <span className="shrink-0 rounded-full border border-border/20 bg-background/25 px-2.5 py-1 text-[9.5px] font-bold uppercase tracking-[0.12em] text-muted-foreground/60">
+          <span className="shrink-0 rounded-md border border-border/60 bg-background/35 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
             {stateMeta.whisper}
           </span>
         </div>
@@ -675,22 +648,22 @@ export default function DashboardPage() {
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
 
           {/* Shallow Top Rhythm Overview Surface */}
-          <div className="mb-8 bg-white/50 dark:bg-muted/[0.03] border border-white/60 dark:border-white/5 backdrop-blur-md rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden shadow-xs">
+          <div className="workspace-panel mb-6 rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative overflow-hidden">
             <div>
-              <span className="text-[10px] font-bold tracking-[0.2em] text-muted-foreground/60 uppercase">Today&apos;s Rhythm</span>
-              <h1 className="text-base sm:text-lg font-black tracking-tight text-primary mt-0.5">
+              <span className="text-xs font-semibold text-muted-foreground">Today&apos;s Rhythm</span>
+              <h1 className="text-base sm:text-lg font-semibold tracking-tight text-foreground mt-0.5">
                 {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
               </h1>
-              <p className="text-[10.5px] font-semibold text-muted-foreground/50 mt-1 uppercase tracking-wider">
+              <p className="text-xs font-medium text-muted-foreground mt-1">
                 One active session at a time
               </p>
             </div>
 
             <div className="flex flex-col sm:items-end gap-1 shrink-0 text-left sm:text-right">
-              <div className="text-xs font-bold text-muted-foreground/75 uppercase tracking-wide">
+              <div className="text-xs font-semibold text-muted-foreground">
                 {completedTodayCount} settled <span className="text-muted-foreground/30">•</span> {allActiveTasks.length} open <span className="text-muted-foreground/30">•</span> {formatMinutes(plannedMinutes)} planned
               </div>
-              <span className="text-[10px] font-bold text-indigo-500/70 dark:text-indigo-300/70">
+              <span className="text-xs font-semibold text-primary/70">
                 {dashboard.momentumSummary.displayLabel}
               </span>
             </div>
@@ -705,20 +678,20 @@ export default function DashboardPage() {
           </div>
 
           {/* ── Main Workspace Grid with Focus-State Transformation ── */}
-          <div className={`relative transition-all duration-1000 ease-in-out ${hasActiveSession ? "bg-black/[0.02] dark:bg-black/20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 rounded-[2.5rem]" : ""}`}>
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }} className="grid gap-10 lg:grid-cols-[minmax(0,1.7fr)_minmax(320px,1fr)] lg:items-start relative z-10">
+          <div className={`relative transition-colors duration-300 ${hasActiveSession ? "bg-black/[0.02] dark:bg-black/20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 rounded-2xl" : ""}`}>
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24, ease: "easeOut" }} className="grid gap-6 lg:grid-cols-[minmax(0,1.75fr)_minmax(300px,0.9fr)] lg:items-start relative z-10">
 
               {/* Workspace Execution Column Container (Left Panel Surface) */}
-              <div className={`order-2 space-y-8 lg:order-1 bg-white/40 dark:bg-muted/[0.03] backdrop-blur-xl border border-white/60 dark:border-white/5 rounded-3xl p-6 sm:p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] transition-all duration-700`}>
+              <div className={`workspace-editor-shell order-2 space-y-7 rounded-2xl p-6 sm:p-8 lg:order-1 transition-colors duration-300`}>
 
                 {/* ── EMPTY STATE ── */}
                 {allActiveTasks.length === 0 ? (
-                  <div className="rounded-3xl border border-dashed border-muted/30 bg-muted/5 p-12 text-center">
-                    <p className="text-lg font-semibold">No active focus blocks today</p>
+                  <div className="rounded-xl border border-dashed border-border bg-muted/10 p-10 text-center">
+                    <p className="text-lg font-semibold text-foreground">No active focus blocks today</p>
                     <p className="mt-2 text-sm text-muted-foreground">
                       Your workspace is clear. Go to Tasks to plan your day.
                     </p>
-                    <Button variant="outline" className="mt-6 gap-2 cursor-pointer rounded-full" onClick={() => router.push("/tasks")}>
+                    <Button variant="outline" className="mt-6 gap-2 cursor-pointer rounded-lg" onClick={() => router.push("/tasks")}>
                       Plan Your Day <ArrowRight className="h-4 w-4" />
                     </Button>
                   </div>
@@ -729,7 +702,7 @@ export default function DashboardPage() {
 
                     {/* Labeled Section Divider: Active Commitment */}
                     <div className="border-b border-border/5 pb-2.5">
-                      <h4 className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground/50">
+                      <h4 className="text-xs font-semibold text-muted-foreground">
                         Active Commitment
                       </h4>
                     </div>
@@ -748,14 +721,14 @@ export default function DashboardPage() {
                         <div className="relative">
                           {/* NOW Stepper Outlined Glowing node (slow breathe opacity, no pulsing alert) */}
                           <div className="absolute left-[-21px] top-4.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background border border-indigo-500 dark:border-indigo-400 shadow-sm z-10">
-                            <span className="relative flex h-1.5 w-1.5 rounded-full bg-indigo-500 breathe-slow" />
+                            <span className="relative flex h-1.5 w-1.5 rounded-full bg-indigo-500" />
                           </div>
 
-                          <div className={`relative rounded-xl border border-white/70 dark:border-white/10 bg-gradient-to-br from-card to-muted/20 p-4 sm:p-4.5 shadow-sm premium-card-static`}>
+                          <div className={`relative rounded-xl border border-border/70 bg-card p-4 sm:p-5 shadow-sm premium-card-static`}>
 
                             {/* Header section with step indicator and minor quick actions */}
                             <div className="flex items-center justify-between border-b border-border/10 pb-2.5 mb-3">
-                              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                              <span className="text-xs font-semibold text-muted-foreground">
                                 {isCurrentFocus ? "Current Focus" : `Next Commitment (1 of ${allActiveTasks.length})`}
                               </span>
 
@@ -766,7 +739,7 @@ export default function DashboardPage() {
                                     variant="ghost"
                                     id={`dashboard-complete-directly-task-${task.id}`}
                                     onClick={() => handleCompleteTask(task.id)}
-                                    className="h-7 w-7 rounded-full border border-border/40 bg-background/20 text-muted-foreground/60 hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20 transition-all cursor-pointer"
+                                    className="h-7 w-7 rounded-lg border border-border/40 bg-background/20 text-muted-foreground/60 hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20 transition-colors cursor-pointer"
                                     title="Complete directly"
                                   >
                                     <Check className="h-3.5 w-3.5" />
@@ -783,17 +756,16 @@ export default function DashboardPage() {
                                   {meta.label}
                                 </Badge>
                                 {isCurrentFocus && (
-                                  <span className="flex items-center gap-1.5 text-xs font-bold tracking-wide uppercase text-indigo-500 dark:text-indigo-400">
+                                  <span className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 dark:text-indigo-400">
                                     <span className="relative flex h-2 w-2">
-                                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
-                                      <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500 breathe-opacity" />
+                                      <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
                                     </span>
                                     Live Session
                                   </span>
                                 )}
                               </div>
 
-                              <h3 className="text-xl sm:text-2xl font-black tracking-tight text-primary leading-tight">
+                              <h3 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground leading-tight">
                                 {task.title}
                               </h3>
 
@@ -803,7 +775,7 @@ export default function DashboardPage() {
                                   <span>{task.durationMinutes} minutes planned</span>
                                 </div>
                                 <span className="hidden sm:inline text-muted-foreground/30">•</span>
-                                <span className="text-[10.5px] font-medium text-indigo-500/90 dark:text-indigo-400/90 italic">
+                                <span className="text-xs font-medium text-primary/75">
                                   {readinessHint}
                                 </span>
                               </div>
@@ -821,7 +793,7 @@ export default function DashboardPage() {
                                 </div>
                               ) : (
                                 <Button
-                                  className="mt-1 w-fit max-w-[60%] gap-2.5 cursor-pointer font-bold py-3 px-5 text-xs sm:text-[13px] rounded-full justify-start mr-auto bg-primary text-primary-foreground border border-transparent shadow-xs hover:bg-primary/95 hover:shadow-md hover:border-primary/20 transition-all duration-300"
+                                  className="mt-1 w-fit max-w-full gap-2.5 cursor-pointer font-semibold py-3 px-5 text-sm rounded-lg justify-start mr-auto bg-primary text-primary-foreground border border-transparent hover:bg-primary/95 transition-colors duration-150"
                                   id={`dashboard-start-task-${task.id}`}
                                   onClick={() => handleStartTask(task.id)}
                                   disabled={hasActiveSession || startingTaskId === task.id}
@@ -863,12 +835,12 @@ export default function DashboardPage() {
                       const collapsedCount = upcomingQueue.length - maxVisible
 
                       return (
-                        <div className={`space-y-4 pt-6 border-t border-border/5 transition-all duration-700 ease-in-out ${hasActiveSession ? "opacity-20 pointer-events-none blur-[0.2px]" : "opacity-100"}`}>
+                        <div className={`space-y-4 pt-6 border-t border-border/60 transition-opacity duration-300 ease-in-out ${hasActiveSession ? "opacity-30 pointer-events-none" : "opacity-100"}`}>
                           <div className="flex items-center justify-between">
-                            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                            <h4 className="text-xs font-semibold text-muted-foreground">
                               Next Flow
                             </h4>
-                            <span className="text-[9.5px] font-mono text-muted-foreground/40">
+                            <span className="text-xs font-mono text-muted-foreground/50">
                               {upcomingQueue.length} remaining • {upcomingMinutes}m
                             </span>
                           </div>
@@ -883,9 +855,9 @@ export default function DashboardPage() {
                               return (
                                 <div
                                   key={task.id}
-                                  className={`relative flex items-center justify-between gap-4 p-3 rounded-xl border transition-all duration-300 ${isNextUp
-                                    ? "border-white/50 dark:border-white/10 bg-white/30 dark:bg-muted/15 opacity-95 hover:border-border/40"
-                                    : "border-white/20 dark:border-white/5 bg-white/10 dark:bg-muted/5 opacity-65 hover:opacity-85 hover:border-border/30"
+                                  className={`relative flex items-center justify-between gap-4 p-3 rounded-lg border transition-colors duration-150 ${isNextUp
+                                    ? "border-border/70 bg-muted/25 opacity-95 hover:border-border"
+                                    : "border-border/40 bg-transparent opacity-70 hover:opacity-90 hover:border-border/70"
                                     } group`}
                                 >
                                   {/* Stepper Node Bullet - next up is indigo styled to inherit focus momentum */}
@@ -897,17 +869,17 @@ export default function DashboardPage() {
                                   {/* Task details */}
                                   <div className="min-w-0 flex-1 pl-1 space-y-1">
                                     <div className="flex items-center gap-2">
-                                      <p className={`font-bold leading-tight text-primary truncate ${isNextUp ? "text-sm" : "text-[12.5px]"}`}>
+                                      <p className={`font-semibold leading-tight text-foreground truncate ${isNextUp ? "text-sm" : "text-xs"}`}>
                                         {task.title}
                                       </p>
                                       {isNextUp && (
-                                        <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-wider shrink-0">
+                                        <span className="text-xs font-semibold text-primary shrink-0">
                                           Next Up
                                         </span>
                                       )}
                                     </div>
-                                    <div className="flex items-center gap-2 text-[10.5px] font-bold text-muted-foreground/80">
-                                      <Badge className={`px-1.5 py-0 text-[8px] border ${meta.badgeClassName} shadow-none`}>
+                                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                                      <Badge className={`px-1.5 py-0 text-xs border ${meta.badgeClassName} shadow-none`}>
                                         <TaskIcon className="mr-1 h-2.5 w-2.5" />
                                         {meta.label}
                                       </Badge>
@@ -917,14 +889,14 @@ export default function DashboardPage() {
                                   </div>
 
                                   {/* Inline actions */}
-                                  <div className="flex items-center gap-1.5 opacity-60 sm:opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                                  <div className="flex items-center gap-1.5 opacity-70 sm:opacity-45 group-hover:opacity-100 transition-opacity shrink-0">
                                     {!hasActiveSession && (
                                       <>
                                         <Button
                                           size="icon"
                                           variant="ghost"
                                           onClick={() => handleStartTask(task.id)}
-                                          className="h-6 w-6 rounded-full border border-border/40 bg-background/30 text-muted-foreground/75 hover:bg-primary/5 hover:text-primary transition-all cursor-pointer"
+                                          className="h-6 w-6 rounded-md border border-border/40 bg-background/30 text-muted-foreground/75 hover:bg-primary/5 hover:text-primary transition-colors cursor-pointer"
                                           title="Start Focus"
                                         >
                                           <Play className="h-2.5 w-2.5 fill-current" />
@@ -933,7 +905,7 @@ export default function DashboardPage() {
                                           size="icon"
                                           variant="ghost"
                                           onClick={() => handleCompleteTask(task.id)}
-                                          className="h-6 w-6 rounded-full border border-border/40 bg-background/30 text-muted-foreground/75 hover:bg-emerald-500/10 hover:text-emerald-500 transition-all cursor-pointer"
+                                          className="h-6 w-6 rounded-md border border-border/40 bg-background/30 text-muted-foreground/75 hover:bg-emerald-500/10 hover:text-emerald-500 transition-colors cursor-pointer"
                                           title="Complete directly"
                                         >
                                           <Check className="h-2.5 w-2.5" />
@@ -955,10 +927,10 @@ export default function DashboardPage() {
                                 <div className="absolute -left-[20.5px] top-[12px] flex h-3.5 w-3.5 items-center justify-center rounded-full bg-background border border-dashed border-muted-foreground/20 shadow-none z-10">
                                   <span className="text-[6.5px] font-bold text-muted-foreground/40">+</span>
                                 </div>
-                                <span className="pl-1.5 text-[10.5px] font-medium text-muted-foreground/70">
+                                <span className="pl-1.5 text-xs font-medium text-muted-foreground/70">
                                   + {collapsedCount} later {collapsedCount === 1 ? "commitment" : "commitments"} today
                                 </span>
-                                <span className="text-[10px] font-mono text-muted-foreground/40 mr-1">
+                                <span className="text-xs font-mono text-muted-foreground/40 mr-1">
                                   queued
                                 </span>
                               </div>
@@ -978,10 +950,10 @@ export default function DashboardPage() {
                           </div>
 
                           <div className="flex items-center justify-between pl-1">
-                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/50">
+                            <span className="text-xs font-semibold text-muted-foreground">
                               Momentum History
                             </span>
-                            <span className="text-[9.5px] font-mono text-emerald-600/60 dark:text-emerald-400/50">
+                            <span className="text-xs font-mono text-emerald-600/60 dark:text-emerald-400/50">
                               {completedTodayCount} done today
                             </span>
                           </div>
@@ -997,7 +969,7 @@ export default function DashboardPage() {
                               return (
                                 <div
                                   key={task.id}
-                                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/10 bg-emerald-500/[0.03] dark:bg-emerald-500/[0.01] backdrop-blur-xs text-[10.5px]"
+                                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-emerald-500/10 bg-emerald-500/[0.03] text-xs"
                                 >
                                   <div className="flex h-3 w-3 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600/70 dark:text-emerald-400/70">
                                     <Check className="h-2 w-2 stroke-[2]" />
@@ -1005,7 +977,7 @@ export default function DashboardPage() {
                                   <span className="font-medium text-muted-foreground/80 line-through truncate max-w-[110px] sm:max-w-[180px]">
                                     {task.title}
                                   </span>
-                                  <span className="text-[9px] font-mono text-emerald-600/60 dark:text-emerald-400/50 shrink-0">
+                                  <span className="text-xs font-mono text-emerald-600/60 dark:text-emerald-400/50 shrink-0">
                                     ({completedMin}m {timeStr && `at ${timeStr}`})
                                   </span>
                                 </div>
@@ -1020,10 +992,10 @@ export default function DashboardPage() {
               </div>
 
               {/* Sidebar Panel Surface (Unified System Support) */}
-              <div className={`order-1 space-y-8 lg:order-2 bg-white/45 dark:bg-muted/[0.03] backdrop-blur-xl border border-white/60 dark:border-white/5 rounded-3xl p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-all duration-700 ease-in-out ${hasActiveSession ? "opacity-25 pointer-events-none blur-[0.6px]" : "opacity-100"}`}>
+              <div className={`workspace-panel order-1 space-y-7 rounded-xl p-5 lg:order-2 transition-opacity duration-300 ease-in-out ${hasActiveSession ? "opacity-35 pointer-events-none" : "opacity-100"}`}>
                 {/* System Insights Ambient Telemetry (Combined with Glance) */}
                 <div className="space-y-5 px-2">
-                  <h4 className="text-[10px] font-bold tracking-[0.2em] uppercase text-muted-foreground/50 flex items-center gap-1.5 mb-2">
+                  <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 mb-2">
                     <Zap className="h-3.5 w-3.5 text-indigo-500/60" />
                     Workspace Signal
                   </h4>
@@ -1042,13 +1014,13 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Minimal Ambient Workout Log */}
-                <div className="mt-10 border-t border-border/5 pt-8 px-2">
+                <div className="mt-8 border-t border-border/60 pt-6 px-2">
                   <div className="flex items-center gap-4">
                     <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${fitnessSummary.didWorkoutToday ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500" : "bg-muted/30 text-muted-foreground/40"}`}>
                       {fitnessSummary.didWorkoutToday ? <CheckCircle2 className="h-4 w-4" /> : <Activity className="h-4 w-4" />}
                     </div>
                     <div className="min-w-0 flex-1 space-y-1">
-                      <h3 className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-muted-foreground/70">
+                      <h3 className="text-xs font-semibold text-muted-foreground">
                         {fitnessSummary.didWorkoutToday ? "Workout Logged" : "Daily Workout"}
                       </h3>
                       <div className="pt-0.5">
@@ -1058,14 +1030,14 @@ export default function DashboardPage() {
                             size="sm"
                             onClick={() => handleWorkoutToggle(false)}
                             disabled={workoutSubmitting}
-                            className="h-5 text-[10px] px-0 hover:bg-transparent text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                            className="h-6 px-0 text-xs hover:bg-transparent text-muted-foreground hover:text-primary transition-colors cursor-pointer"
                           >
                             {workoutSubmitting ? "Reverting…" : "Undo Log"}
                           </Button>
                         ) : (
                           <Button
                             variant="outline"
-                            className="h-6 text-[10px] px-3.5 rounded-full cursor-pointer hover:bg-primary/5 hover:text-primary border-primary/20 transition-colors"
+                            className="h-7 px-3 rounded-lg text-xs cursor-pointer hover:bg-primary/5 hover:text-primary border-primary/20 transition-colors"
                             onClick={() => handleWorkoutToggle(true)}
                             disabled={workoutSubmitting}
                           >

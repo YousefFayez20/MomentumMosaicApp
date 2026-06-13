@@ -97,7 +97,7 @@ class TaskControllerTest {
         response.setDurationMinutes(60);
         response.setCompleted(false);
 
-        when(taskService.createTask(eq("Study"), eq(1L), eq(TaskType.SHALLOW), eq(60), isNull()))
+        when(taskService.createTask(eq("Study"), eq(1L), eq(TaskType.SHALLOW), eq(60), isNull(), isNull()))
                 .thenReturn(task);
         when(dtoMapper.taskToTaskResponse(task)).thenReturn(response);
 
@@ -119,7 +119,7 @@ class TaskControllerTest {
                 .andExpect(jsonPath("$.taskType").value("SHALLOW"))
                 .andExpect(jsonPath("$.completed").value(false));
 
-        verify(taskService).createTask("Study", 1L, TaskType.SHALLOW, 60, null);
+        verify(taskService).createTask("Study", 1L, TaskType.SHALLOW, 60, null, null);
     }
 
     @Test

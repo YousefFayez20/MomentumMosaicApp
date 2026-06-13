@@ -28,6 +28,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     private final WorkSpaceEntryRepository workSpaceEntryRepository;
     private final WorkspaceResourceRepository workspaceResourceRepository;
     private final TaskRepository taskRepository;
+    private final UrlMetadataService urlMetadataService;
     private static final int MAX_ENTRY_DEPTH = 3;
     private static final int ORDER_GAP = 1000; // Gap-based ordering
 
@@ -239,8 +240,21 @@ public class WorkspaceServiceImpl implements WorkspaceService {
         WorkspaceResource resource = new WorkspaceResource();
         resource.setWorkspace(workspace);
         resource.setUrl(req.getUrl());
-        resource.setLabel(req.getLabel());
-        resource.setResourceType(req.getResourceType());
+
+        String label = req.getLabel();
+        WorkspaceResourceType resourceType = req.getResourceType();
+        if (label == null || label.trim().isEmpty() || resourceType == null) {
+            UrlMetadataService.Metadata meta = urlMetadataService.resolveMetadata(req.getUrl());
+            if (label == null || label.trim().isEmpty()) {
+                label = meta.title();
+            }
+            if (resourceType == null) {
+                resourceType = meta.type();
+            }
+        }
+
+        resource.setLabel(label);
+        resource.setResourceType(resourceType);
         resource.setOrderIndex(
                 workspaceResourceRepository.findByWorkspaceIdOrderByOrderIndex(workspaceId).size() * ORDER_GAP
         );

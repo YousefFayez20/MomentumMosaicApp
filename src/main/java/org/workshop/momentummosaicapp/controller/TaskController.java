@@ -37,7 +37,8 @@ public class TaskController {
                 userId,
                 request.getTaskType(),
                 request.getDurationMinutes(),
-                request.getPlannedForDate()
+                request.getPlannedForDate(),
+                request.getWorkspaceId()
         );
         return dtoMapper.taskToTaskResponse(task);
     }
@@ -57,7 +58,8 @@ public class TaskController {
                 request.getTitle(),
                 request.getTaskType(),
                 request.getDurationMinutes(),
-                request.getPlannedForDate()
+                request.getPlannedForDate(),
+                request.getWorkspaceId()
         );
         return dtoMapper.taskToTaskResponse(task);
     }

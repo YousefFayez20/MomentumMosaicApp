@@ -49,10 +49,10 @@ const TASK_TYPE_META: Record<
   },
 }
 
-const RADIUS = 90
-const STROKE = 7
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS
-const SIZE = (RADIUS + STROKE) * 2
+const FULLSCREEN_RADIUS = 90
+const FULLSCREEN_STROKE = 7
+const DOCKED_RADIUS = 30
+const DOCKED_STROKE = 4
 
 function formatElapsed(seconds: number) {
   const safeSeconds = Math.max(0, seconds)
@@ -80,40 +80,45 @@ interface RingProps {
   ringColor: string
   glowColor: string
   overtime: boolean
+  size: "sm" | "lg"
 }
 
-function CircularProgressRing({ progress, elapsed, ringColor, glowColor, overtime }: RingProps) {
+function CircularProgressRing({ progress, elapsed, ringColor, glowColor, overtime, size }: RingProps) {
+  const radius = size === "sm" ? DOCKED_RADIUS : FULLSCREEN_RADIUS
+  const stroke = size === "sm" ? DOCKED_STROKE : FULLSCREEN_STROKE
+  const circumference = 2 * Math.PI * radius
+  const ringSize = (radius + stroke) * 2
   const clampedProgress = Math.min(Math.max(progress, 0), 1)
-  const dashOffset = CIRCUMFERENCE * (1 - clampedProgress)
+  const dashOffset = circumference * (1 - clampedProgress)
 
   return (
     <div className="relative flex items-center justify-center">
       <svg
-        width={SIZE}
-        height={SIZE}
-        viewBox={`0 0 ${SIZE} ${SIZE}`}
+        width={ringSize}
+        height={ringSize}
+        viewBox={`0 0 ${ringSize} ${ringSize}`}
         className="focus-ring-breathe-glow -rotate-90"
         style={{ filter: `drop-shadow(0 0 8px ${glowColor})` }}
         aria-hidden="true"
       >
         <circle
-          cx={SIZE / 2}
-          cy={SIZE / 2}
-          r={RADIUS}
+          cx={ringSize / 2}
+          cy={ringSize / 2}
+          r={radius}
           fill="none"
           stroke="currentColor"
-          strokeWidth={STROKE}
+          strokeWidth={stroke}
           className="text-muted/30"
         />
         <circle
-          cx={SIZE / 2}
-          cy={SIZE / 2}
-          r={RADIUS}
+          cx={ringSize / 2}
+          cy={ringSize / 2}
+          r={radius}
           fill="none"
           stroke={overtime ? "#f87171" : ringColor}
-          strokeWidth={STROKE}
+          strokeWidth={stroke}
           strokeLinecap="round"
-          strokeDasharray={CIRCUMFERENCE}
+          strokeDasharray={circumference}
           strokeDashoffset={dashOffset}
           className="focus-ring-breathe transition-all duration-1000 ease-linear"
           style={{ transition: "stroke-dashoffset 1s linear, stroke 0.5s ease" }}
@@ -122,14 +127,16 @@ function CircularProgressRing({ progress, elapsed, ringColor, glowColor, overtim
 
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span
-          className="font-mono text-4xl font-extrabold tabular-nums tracking-tighter sm:text-5xl"
+          className={size === "sm" ? "font-mono text-lg font-extrabold tabular-nums tracking-tighter" : "font-mono text-4xl font-extrabold tabular-nums tracking-tighter sm:text-5xl"}
           style={{ color: overtime ? "#f87171" : ringColor }}
         >
           {formatElapsed(elapsed)}
         </span>
-        <span className="mt-1 text-[0.68rem] font-bold uppercase tracking-[0.28em] text-muted-foreground/60">
-          {overtime ? "Overtime" : "Elapsed"}
-        </span>
+        {size === "lg" && (
+          <span className="mt-1 text-[0.68rem] font-bold uppercase tracking-[0.28em] text-muted-foreground/60">
+            {overtime ? "Overtime" : "Elapsed"}
+          </span>
+        )}
       </div>
     </div>
   )
@@ -144,6 +151,7 @@ interface FocusModeProps {
   isCelebrating?: boolean
   completedCountToday?: number
   onCloseCelebration?: () => void
+  variant?: "fullscreen" | "docked"
 }
 
 export function FocusMode({
@@ -155,6 +163,7 @@ export function FocusMode({
   isCelebrating = false,
   completedCountToday = 0,
   onCloseCelebration,
+  variant = "docked",
 }: FocusModeProps) {
   const [elapsed, setElapsed] = useState(0)
   const [mounted, setMounted] = useState(false)
@@ -198,13 +207,15 @@ export function FocusMode({
   }, [isCelebrating])
 
   useEffect(() => {
+    if (variant !== "fullscreen") return
+    
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = "hidden"
 
     return () => {
       document.body.style.overflow = previousOverflow
     }
-  }, [])
+  }, [variant])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -254,7 +265,7 @@ export function FocusMode({
 
   if (!mounted) return null
 
-  const overlay = (
+  const overlay = variant === "fullscreen" ? (
     <div className="focus-overlay dark" role="dialog" aria-modal="true" aria-labelledby={isCelebrating ? "celebration-title" : "focus-session-title"}>
       <div className="focus-ambient" aria-hidden="true" style={{ "--focus-glow": meta.glowColor } as CSSProperties} />
 
@@ -383,6 +394,7 @@ export function FocusMode({
               ringColor={meta.ringColor}
               glowColor={meta.glowColor}
               overtime={overtime}
+              size="lg"
             />
 
             <div className="w-full max-w-sm space-y-2">
@@ -476,6 +488,99 @@ export function FocusMode({
           )}
         </div>
       )}
+    </div>
+  ) : (
+    <div className="fixed bottom-6 right-6 z-50 shadow-2xl rounded-2xl bg-card border border-border/40 overflow-hidden dark max-w-[320px] w-full" style={{ filter: `drop-shadow(0 8px 32px ${meta.glowColor})` }}>
+      <div className="p-4 relative z-10 bg-background/95 backdrop-blur-md">
+        <div className="flex items-center justify-between mb-3">
+          <Badge className={`gap-1 border text-[10px] py-0 h-5 ${meta.badgeClass}`}>
+            <TypeIcon className="h-3 w-3" />
+            {meta.label}
+          </Badge>
+          <div className="flex items-center gap-1.5 rounded-full border border-muted/20 bg-muted/10 px-2 py-0.5">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </span>
+            <span className="text-[10px] font-medium text-emerald-400">Live</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <CircularProgressRing
+            progress={progress}
+            elapsed={elapsed}
+            ringColor={meta.ringColor}
+            glowColor={meta.glowColor}
+            overtime={overtime}
+            size="sm"
+          />
+          <div className="flex-1 min-w-0">
+            <h2 className="text-sm font-bold text-foreground truncate">{task.title}</h2>
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground mt-1">
+              <span className="truncate pr-2">{overtime ? `${task.durationMinutes}m reached` : formatRemaining(remainingSeconds)}</span>
+              <span>{progressPercent}%</span>
+            </div>
+            <div className="h-1 mt-1.5 overflow-hidden rounded-full bg-muted/30">
+              <div
+                className="h-full rounded-full transition-all duration-1000"
+                style={{
+                  width: `${progressPercent}%`,
+                  backgroundColor: overtime ? "#f87171" : meta.ringColor,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 flex gap-2">
+          {!showAbandonConfirm ? (
+            <>
+              <Button
+                size="sm"
+                className="flex-1 h-8 text-xs gap-1.5"
+                style={{ backgroundColor: meta.ringColor, color: "#fff" }}
+                onClick={handleComplete}
+                disabled={completing || abandoning}
+              >
+                {completing ? (
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                ) : "Complete"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2 text-xs text-muted-foreground"
+                onClick={() => setShowAbandonConfirm(true)}
+                disabled={completing || abandoning}
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </>
+          ) : (
+            <div className="flex w-full gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-8 text-[10px]"
+                onClick={() => setShowAbandonConfirm(false)}
+                disabled={abandoning}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="flex-1 h-8 text-[10px]"
+                onClick={handleAbandon}
+                disabled={abandoning}
+              >
+                {abandoning ? "..." : "Abandon"}
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 

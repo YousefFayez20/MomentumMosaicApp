@@ -91,7 +91,7 @@ export default function HomePage() {
             <a href="#features" className="transition hover:text-foreground">Features</a>
             <a href="#notes" className="transition hover:text-foreground">Notes preview</a>
           </nav>
-          <Button onClick={handleGoogleLogin} className="rounded-full px-5 shadow-lg shadow-primary/15">
+          <Button onClick={handleGoogleLogin} className="rounded-lg px-5 shadow-lg shadow-primary/15">
             Sign in
             <ArrowRight className="h-4 w-4" />
           </Button>
@@ -112,11 +112,11 @@ export default function HomePage() {
             {APP_DESCRIPTION} Built for people who want a calm command center for focused work, fitness, and daily follow-through.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button onClick={handleGoogleLogin} size="lg" className="h-12 rounded-full px-6 shadow-xl shadow-primary/15">
+            <Button onClick={handleGoogleLogin} size="lg" className="h-12 rounded-lg px-6 shadow-xl shadow-primary/15">
               Continue with Google
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button asChild size="lg" variant="outline" className="h-12 rounded-full border-primary/15 bg-card/70 px-6 backdrop-blur">
+            <Button asChild size="lg" variant="outline" className="h-12 rounded-lg border-primary/15 bg-card/70 px-6 backdrop-blur">
               <a href="#features">
                 Explore features
                 <ArrowRight className="h-4 w-4" />
@@ -218,8 +218,7 @@ function ProductPreview() {
              <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex w-fit items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
                   <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500 breathe-opacity" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
                   </span>
                   Focus Mode Active
                 </div>

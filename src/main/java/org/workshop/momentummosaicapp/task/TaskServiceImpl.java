@@ -28,7 +28,7 @@ public class TaskServiceImpl implements TaskService{
     private final WorkspaceRepository workspaceRepository;
 
     @Override
-    public Task createTask(String title, Long userId, TaskType taskType, Integer durationMinutes, LocalDate plannedForDate) {
+    public Task createTask(String title, Long userId, TaskType taskType, Integer durationMinutes, LocalDate plannedForDate, Long workspaceId) {
        validateTaskDuration(taskType,durationMinutes);
         AppUser appUser = getUserOrThrow(userId);
         Task task = new Task();
@@ -38,11 +38,21 @@ public class TaskServiceImpl implements TaskService{
         task.setDurationMinutes(durationMinutes);
         task.setPlannedForDate(resolvePlannedForDate(plannedForDate));
         task.setStatus(TaskStatus.PLANNED);
+        
+        if (workspaceId != null) {
+            Workspace workspace = workspaceRepository.findById(workspaceId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+            if (!workspace.getAppUser().getId().equals(userId)) {
+                throw new ForbiddenException("Workspace does not belong to this user.");
+            }
+            task.setWorkspace(workspace);
+        }
+        
         return taskRepository.save(task);
     }
 
     @Override
-    public Task updateTask(Long userId, Long taskId, String title, TaskType taskType, Integer durationMinutes, LocalDate plannedForDate) {
+    public Task updateTask(Long userId, Long taskId, String title, TaskType taskType, Integer durationMinutes, LocalDate plannedForDate, Long workspaceId) {
        Task task = getTaskOrThrow(taskId);
        validateOwnership(userId,task);
        if(task.isCompleted()) throw new BadRequestException("Cannot update a completed task");
@@ -51,6 +61,18 @@ public class TaskServiceImpl implements TaskService{
        task.setTaskType(taskType);
        task.setDurationMinutes(durationMinutes);
        task.setPlannedForDate(resolvePlannedForDate(plannedForDate));
+
+       if (workspaceId != null) {
+           Workspace workspace = workspaceRepository.findById(workspaceId)
+                   .orElseThrow(() -> new ResourceNotFoundException("Workspace not found"));
+           if (!workspace.getAppUser().getId().equals(userId)) {
+               throw new ForbiddenException("Workspace does not belong to this user.");
+           }
+           task.setWorkspace(workspace);
+       } else {
+           task.setWorkspace(null);
+       }
+
         return taskRepository.save(task);
     }
 

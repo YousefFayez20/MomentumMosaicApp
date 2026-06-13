@@ -260,7 +260,7 @@ export default function TasksPage() {
               <h2 className="text-3xl font-extrabold tracking-tight text-primary sm:text-4xl">Tasks</h2>
               <p className="mt-2 text-muted-foreground">Your active commitments and completed work</p>
             </div>
-            <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 rounded-full px-5 shadow-lg shadow-primary/15" id="create-task-btn">
+            <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 rounded-lg px-5 shadow-lg shadow-primary/15" id="create-task-btn">
               <Plus className="h-4 w-4" />
               New Task
             </Button>
@@ -301,10 +301,10 @@ export default function TasksPage() {
               <Tabs defaultValue="active" className="reveal-up reveal-delay-2 w-full">
                 <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <TabsList className="grid w-full max-w-md grid-cols-2 rounded-xl p-1 bg-white/40 shadow-sm border border-white/60 backdrop-blur-md">
-                    <TabsTrigger value="active" className="rounded-full">
+                    <TabsTrigger value="active" className="rounded-lg">
                       Active ({activeTasks.length})
                     </TabsTrigger>
-                    <TabsTrigger value="completed" className="rounded-full">
+                    <TabsTrigger value="completed" className="rounded-lg">
                       Completed ({completedTasks.length})
                     </TabsTrigger>
                   </TabsList>
@@ -320,14 +320,14 @@ export default function TasksPage() {
                   {activeTasks.length === 0 ? (
                     <Card className="border-white/60 bg-white/40 shadow-sm backdrop-blur-xl rounded-2xl border-dashed">
                       <CardContent className="flex h-64 flex-col items-center justify-center p-6 text-center">
-                        <div className="mb-4 rounded-full bg-muted p-4">
+                        <div className="mb-4 rounded-2xl bg-muted p-4">
                           <Layers className="h-8 w-8 text-muted-foreground" />
                         </div>
                         <h3 className="mb-2 text-lg font-semibold">No active tasks</h3>
                         <p className="mb-4 max-w-sm text-sm text-muted-foreground">
                           You're all caught up. Add a task when you're ready to plan the next block.
                         </p>
-                        <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 rounded-full">
+                        <Button onClick={() => setCreateDialogOpen(true)} className="gap-2 rounded-lg">
                           <Plus className="h-4 w-4" />
                           Create New Task
                         </Button>
@@ -349,8 +349,7 @@ export default function TasksPage() {
                               </div>
                               <span className="flex items-center gap-1.5 text-xs font-semibold text-indigo-500 dark:text-indigo-400">
                                 <span className="relative flex h-1.5 w-1.5">
-                                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
-                                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-500 breathe-opacity" />
+                                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-500" />
                                 </span>
                                 In Progress
                               </span>
@@ -417,7 +416,7 @@ export default function TasksPage() {
                                         variant="ghost"
                                         id={`complete-directly-task-${task.id}`}
                                         onClick={() => handleCompleteTask(task.id)}
-                                        className="h-7 w-7 rounded-full border border-border bg-background/50 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20 shadow-xs transition-all duration-300 cursor-pointer"
+                                        className="h-7 w-7 rounded-lg border border-border bg-background/50 text-muted-foreground hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/20 shadow-xs transition-all duration-300 cursor-pointer"
                                         title="Complete directly"
                                       >
                                         <Check className="h-3.5 w-3.5" />
@@ -427,7 +426,7 @@ export default function TasksPage() {
                                         variant="ghost"
                                         id={`edit-task-${task.id}`}
                                         onClick={() => setEditingTask(task)}
-                                        className="h-7 w-7 rounded-full border border-border bg-background/50 text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-xs transition-all duration-300 cursor-pointer"
+                                        className="h-7 w-7 rounded-lg border border-border bg-background/50 text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/20 shadow-xs transition-all duration-300 cursor-pointer"
                                         title="Edit task"
                                       >
                                         <Edit2 className="h-3 w-3" />
@@ -437,7 +436,7 @@ export default function TasksPage() {
                                         variant="ghost"
                                         id={`delete-task-${task.id}`}
                                         onClick={() => handleDeleteTask(task.id)}
-                                        className="h-7 w-7 rounded-full border border-border bg-background/50 text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 shadow-xs transition-all duration-300 cursor-pointer"
+                                        className="h-7 w-7 rounded-lg border border-border bg-background/50 text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 shadow-xs transition-all duration-300 cursor-pointer"
                                         title="Delete task"
                                       >
                                         <Trash2 className="h-3 w-3" />
