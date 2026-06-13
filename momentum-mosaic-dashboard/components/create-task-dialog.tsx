@@ -23,9 +23,10 @@ interface CreateTaskDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
+  defaultWorkspaceId?: number
 }
 
-export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDialogProps) {
+export function CreateTaskDialog({ open, onOpenChange, onSuccess, defaultWorkspaceId }: CreateTaskDialogProps) {
   const { user } = useAuth()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
@@ -65,6 +66,7 @@ export function CreateTaskDialog({ open, onOpenChange, onSuccess }: CreateTaskDi
         title: formData.title,
         taskType: formData.taskType,
         durationMinutes,
+        workspaceId: defaultWorkspaceId,
       })
       toast({
         title: "Task added",

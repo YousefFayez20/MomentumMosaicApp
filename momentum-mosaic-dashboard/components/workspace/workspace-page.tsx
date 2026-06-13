@@ -22,6 +22,10 @@ import {
   Youtube,
   Plus,
   Play,
+  CheckCircle,
+  X,
+  Link2,
+  PlayCircle,
 } from "lucide-react"
 
 import { Dialog, DialogContent } from "@/components/ui/dialog"
@@ -65,6 +69,8 @@ import { SectionManagementPopover } from "@/components/workspace/section-managem
 import { WorkspaceSettingsPopover } from "@/components/workspace/workspace-settings-popover"
 import { cn } from "@/lib/utils"
 import { WorkspaceEntryItem, type EntrySaveState } from "@/components/workspace/workspace-entry-item"
+import { useFocusTimer } from "@/hooks/use-focus-timer"
+import { CreateTaskDialog } from "@/components/create-task-dialog"
 
 interface WorkspacePageProps {
   workspaceId: number
@@ -286,16 +292,16 @@ function FocusTaskCard({ task, onUpdate }: { task: TaskResponse; onUpdate: () =>
 
   return (
     <div className={cn(
-      "rounded-2xl border p-4 shadow-sm transition-colors",
+      "workspace-context-card rounded-xl p-4 transition-colors",
       task.status === "IN_PROGRESS"
-        ? "border-primary/40 bg-primary/5 dark:bg-primary/10 shadow-[0_0_15px_rgba(172,206,197,0.15)]"
-        : "border-white/50 bg-white/70 dark:border-white/5 dark:bg-white/[0.03]"
+        ? "border-primary/35 bg-primary/5 dark:bg-primary/10"
+        : "bg-card/70"
     )}>
-      <p className="text-sm font-semibold text-primary">{task.title}</p>
+      <p className="text-sm font-semibold text-foreground">{task.title}</p>
 
-      <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] font-medium text-muted-foreground">
+      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs font-medium text-muted-foreground">
         <span className={cn(
-          "rounded-full px-2.5 py-1",
+          "rounded-md px-2 py-0.5",
           task.status === "IN_PROGRESS" ? "bg-primary/20 text-primary" : "bg-primary/8 text-primary"
         )}>
           {task.status === "IN_PROGRESS" && task.startedAt ? `${elapsed} min focused` : formatTaskStatus(task)}
@@ -312,7 +318,7 @@ function FocusTaskCard({ task, onUpdate }: { task: TaskResponse; onUpdate: () =>
         {task.status === "PLANNED" && (
           <Button
             size="sm"
-            className="w-full rounded-full"
+            className="w-full rounded-lg"
             onClick={() => handleAction("start")}
             disabled={loading}
           >
@@ -323,7 +329,7 @@ function FocusTaskCard({ task, onUpdate }: { task: TaskResponse; onUpdate: () =>
           <>
             <Button
               size="sm"
-              className="flex-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="flex-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white"
               onClick={() => handleAction("complete")}
               disabled={loading}
             >
@@ -332,7 +338,7 @@ function FocusTaskCard({ task, onUpdate }: { task: TaskResponse; onUpdate: () =>
             <Button
               size="sm"
               variant="outline"
-              className="flex-1 rounded-full"
+              className="flex-1 rounded-lg"
               onClick={() => handleAction("abandon")}
               disabled={loading}
             >
@@ -393,16 +399,16 @@ export function WorkspaceHomePage() {
           {loading ? (
             <BrandedLoader className="min-h-[50vh]" label="Loading workspace" />
           ) : error ? (
-            <div className="rounded-3xl border border-destructive/20 bg-white/70 p-8 text-center shadow-sm backdrop-blur dark:bg-white/[0.03]">
+            <div className="rounded-2xl border border-destructive/20 bg-white/70 p-8 text-center shadow-sm backdrop-blur dark:bg-white/[0.03]">
               <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
               <h1 className="mt-4 text-2xl font-black text-primary">Workspace unavailable</h1>
               <p className="mt-2 text-sm text-muted-foreground">{error}</p>
-              <Button className="mt-5 rounded-full" onClick={() => void loadWorkspaces()}>
+              <Button className="mt-5 rounded-lg" onClick={() => void loadWorkspaces()}>
                 Try again
               </Button>
             </div>
           ) : workspaces.length === 0 ? (
-            <div className="rounded-3xl border border-white/50 bg-white/70 p-8 shadow-sm backdrop-blur dark:border-white/5 dark:bg-white/[0.03]">
+            <div className="rounded-2xl border border-white/50 bg-white/70 p-8 shadow-sm backdrop-blur dark:border-white/5 dark:bg-white/[0.03]">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground/65">
                 Study Workspace
               </p>
@@ -411,7 +417,7 @@ export function WorkspaceHomePage() {
                 This MVP stays focused on execution inside existing study workspaces. Once a workspace exists, this route
                 becomes the calm place to think, write, and stay inside the current DEEP commitment.
               </p>
-              <Button className="mt-4 rounded-full" onClick={() => setCreateDialogOpen(true)}>
+              <Button className="mt-4 rounded-lg" onClick={() => setCreateDialogOpen(true)}>
                 Create Workspace
               </Button>
             </div>
@@ -440,6 +446,9 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
   const [navigationOpen, setNavigationOpen] = useState(false)
   const [contextOpen, setContextOpen] = useState(false)
   const [resourceDialogOpen, setResourceDialogOpen] = useState(false)
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false)
+  const [completingTaskId, setCompletingTaskId] = useState<number | null>(null)
+  const [abandoningTaskId, setAbandoningTaskId] = useState<number | null>(null)
   const [pendingNavigationTarget, setPendingNavigationTarget] = useState<string | null>(null)
   const [entrySaveStates, setEntrySaveStates] = useState<Record<number, EntrySaveState>>({})
   const [actionError, setActionError] = useState("")
@@ -486,17 +495,22 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
     else entryRefsMap.current.delete(entryId)
   }
 
-  const linkedDeepTasks = useMemo(() => {
+  const workspaceTasks = useMemo(() => {
     if (!workspaceData) return []
-
-    return workspaceData.tasks
-      .filter((task) => task.workspaceId === workspaceId && task.taskType === "DEEP")
-      .sort((left, right) => {
-        const leftScore = left.status === "IN_PROGRESS" ? 0 : left.status === "PLANNED" ? 1 : 2
-        const rightScore = right.status === "IN_PROGRESS" ? 0 : right.status === "PLANNED" ? 1 : 2
-        return leftScore - rightScore
-      })
+    return workspaceData.tasks.filter((task) => task.workspaceId === workspaceId)
   }, [workspaceData, workspaceId])
+
+  const completedWorkspaceTime = useMemo(() => {
+    return workspaceTasks
+      .filter((t) => t.status === "COMPLETED")
+      .reduce((acc, t) => acc + (t.actualMinutes || t.durationMinutes), 0)
+  }, [workspaceTasks])
+
+  const inProgressTask = useMemo(() => {
+    return workspaceTasks.find((t) => t.status === "IN_PROGRESS")
+  }, [workspaceTasks])
+
+  const { elapsed, formatElapsed } = useFocusTimer(inProgressTask)
 
   const workspaceGroups = useMemo(() => {
     if (!workspaceData) return []
@@ -559,6 +573,66 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
   }
 
   // -- Section management handlers --
+  const handleStartTask = async (taskId: number) => {
+    try {
+      const updated = await apiClient.startTask(taskId)
+      setWorkspaceData((cur) => {
+        if (!cur) return cur
+        return {
+          ...cur,
+          tasks: cur.tasks.map((t) => (t.id === taskId ? updated : t)),
+        }
+      })
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleCompleteTask = async (taskId: number) => {
+    setCompletingTaskId(taskId)
+    try {
+      const updated = await apiClient.completeTask(taskId)
+      setWorkspaceData((cur) => {
+        if (!cur) return cur
+        return {
+          ...cur,
+          tasks: cur.tasks.map((t) => (t.id === taskId ? updated : t)),
+        }
+      })
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setCompletingTaskId(null)
+    }
+  }
+
+  const handleAbandonTask = async (taskId: number) => {
+    setAbandoningTaskId(taskId)
+    try {
+      const updated = await apiClient.abandonTask(taskId)
+      setWorkspaceData((cur) => {
+        if (!cur) return cur
+        return {
+          ...cur,
+          tasks: cur.tasks.map((t) => (t.id === taskId ? updated : t)),
+        }
+      })
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setAbandoningTaskId(null)
+    }
+  }
+
+  const formatHeaderTime = (minutes: number) => {
+    if (minutes === 0) return null
+    const h = Math.floor(minutes / 60)
+    const m = minutes % 60
+    if (h > 0 && m > 0) return `${h}h ${m}m focus`
+    if (h > 0) return `${h}h focus`
+    return `${m}m focus`
+  }
+
   const handleRenameSection = async (sectionId: number, newName: string) => {
     try {
       const updated = await apiClient.updateSection(sectionId, { name: newName })
@@ -1062,17 +1136,17 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
   const navigationSurface = (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="border-b border-white/40 px-5 py-4 dark:border-white/5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">
+      <div className="border-b border-border/70 px-5 py-4">
+        <p className="text-xs font-semibold text-muted-foreground">
           Study Workspace
         </p>
-        <h2 className="mt-2 text-lg font-black tracking-tight text-primary">One calm place to work</h2>
+        <h2 className="mt-1 text-base font-semibold tracking-tight text-foreground">One calm place to work</h2>
       </div>
 
       {/* Workspace list */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {workspaceGroups.length === 0 && (
-          <p className="px-1 text-[13px] text-muted-foreground/50">No workspaces yet.</p>
+          <p className="px-1 text-sm text-muted-foreground/50">No workspaces yet.</p>
         )}
 
         {workspaceGroups.map((group) => {
@@ -1088,7 +1162,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                   <button
                     type="button"
                     onClick={() => toggleSectionCollapsed(group.id)}
-                    className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-black/[0.03] dark:hover:bg-white/[0.04]"
+                    className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-muted"
                   >
                     <ChevronRight
                       className={cn(
@@ -1096,7 +1170,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                         !isCollapsed && "rotate-90",
                       )}
                     />
-                    <h3 className="truncate text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">
+                    <h3 className="truncate text-xs font-semibold text-muted-foreground">
                       {group.label}
                     </h3>
                   </button>
@@ -1113,7 +1187,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                     </div>
                   )}
                   {isUnsectioned && (
-                    <span className="shrink-0 text-[10px] text-muted-foreground/30">—</span>
+                    <span className="shrink-0 text-xs text-muted-foreground/30">—</span>
                   )}
                 </div>
               )}
@@ -1122,7 +1196,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
               {!isCollapsed && (
                 <div className="space-y-1">
                   {group.workspaces.length === 0 && showHeader && (
-                    <p className="px-2 py-1.5 text-[12px] text-muted-foreground/40 italic">
+                    <p className="px-2 py-1.5 text-xs text-muted-foreground/50">
                       No workspaces yet
                     </p>
                   )}
@@ -1146,10 +1220,10 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                             }
                           }}
                           className={cn(
-                            "flex min-w-0 flex-1 items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left transition-all duration-150",
+                            "flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-3 py-2.5 text-left transition-colors duration-150",
                             isActive
                               ? "bg-primary/[0.08] text-primary relative before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-primary/70"
-                              : "text-muted-foreground hover:bg-white/60 hover:text-primary dark:hover:bg-white/[0.04]",
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
                             isWorking && !isActive && "text-primary bg-primary/5",
                           )}
                         >
@@ -1157,10 +1231,10 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                             <span className="flex items-center gap-2 truncate text-sm font-semibold">
                               {groupWorkspace.title}
                               {isWorking && (
-                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary animate-pulse" />
+                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                               )}
                             </span>
-                            <span className="block pt-0.5 text-[11px] font-medium text-muted-foreground/60">
+                            <span className="block pt-0.5 text-xs font-medium text-muted-foreground/60">
                               {formatUpdatedAt(groupWorkspace.lastActiveAt)}
                             </span>
                           </span>
@@ -1194,11 +1268,11 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
       </div>
 
       {/* Sidebar footer: New Workspace + section actions */}
-      <div className="border-t border-white/40 px-4 py-3 dark:border-white/5 space-y-1.5">
+      <div className="border-t border-border/70 px-4 py-3 space-y-1.5">
         <button
           type="button"
           onClick={() => setCreateDialogOpenNav(true)}
-          className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground/60 transition-colors hover:bg-primary/[0.06] hover:text-primary"
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
           <Plus className="h-3.5 w-3.5" />
           New Workspace
@@ -1212,7 +1286,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
               setNewSectionMode(true)
               requestAnimationFrame(() => newSectionInputRef.current?.focus())
             }}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground/40 transition-colors hover:bg-black/[0.03] hover:text-muted-foreground/70 dark:hover:bg-white/[0.04]"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
           >
             <Plus className="h-3.5 w-3.5" />
             Organize into Sections
@@ -1227,7 +1301,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
               setNewSectionMode(true)
               requestAnimationFrame(() => newSectionInputRef.current?.focus())
             }}
-            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-medium text-muted-foreground/40 transition-colors hover:bg-black/[0.03] hover:text-muted-foreground/70 dark:hover:bg-white/[0.04]"
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground"
           >
             <Plus className="h-3.5 w-3.5" />
             New Section
@@ -1258,7 +1332,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                   setNewSectionDraft("")
                 }, 150)
               }}
-              className="flex-1 rounded-lg border border-black/[0.08] bg-white/80 px-2.5 py-1.5 text-[13px] font-medium text-primary placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-white/10 dark:bg-white/[0.06]"
+              className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-sm font-medium text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30"
               autoFocus
             />
           </div>
@@ -1292,11 +1366,14 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
 
   const contextSurface = (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-white/40 px-5 py-4 dark:border-white/5">
-        <h2 className="text-lg font-black tracking-tight text-primary">Resources</h2>
+      <div className="flex items-center justify-between border-b border-border/70 px-5 py-4">
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground">Workspace Context</p>
+          <h2 className="mt-1 text-base font-semibold tracking-tight text-foreground">Next useful action</h2>
+        </div>
         <button
           type="button"
-          className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+          className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted transition-colors"
           onClick={(e) => {
             e.preventDefault()
             setResourceDialogOpen(true)
@@ -1307,11 +1384,22 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
       </div>
 
       <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
+
         {/* Resources section */}
-        <section className="space-y-3">
-          {workspace && workspace.resources.length > 0 ? (
-            <div className="space-y-3">
-              {workspace.resources
+        <section className="space-y-4 border-t border-border/60 pt-5">
+          <div className="flex items-center justify-between text-primary">
+            <div className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              <h4 className="text-sm font-bold uppercase tracking-wider">Resources</h4>
+            </div>
+            <span className="text-xs font-medium text-muted-foreground opacity-70">
+              {workspace?.resources.length ?? 0}
+            </span>
+          </div>
+          
+          <div className="space-y-2">
+            {workspace && workspace.resources.length > 0 ? (
+              workspace.resources
                 .slice()
                 .sort(compareByOrderIndex)
                 .map((resource) => {
@@ -1334,56 +1422,34 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                   }
 
                   const standardCard = (
-                    <div className="group relative flex items-center justify-between overflow-hidden rounded-2xl border border-black/[0.04] bg-white/40 shadow-sm backdrop-blur transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-md dark:border-white/[0.04] dark:bg-white/[0.02] dark:hover:bg-white/[0.04]">
-                      <a
-                        href={resource.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex flex-1 items-center gap-3 p-2.5 min-w-0"
-                      >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary/[0.05] dark:bg-white/[0.05]">
-                          <FaviconWithFallback url={resource.url} hostname={hostname} />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <h4 className="truncate text-xs font-semibold text-primary/95 group-hover:text-primary transition-colors">
-                            {displayTitle}
-                          </h4>
-                          <span className="block pt-0.5 text-[10px] font-medium text-muted-foreground/60 truncate">
-                            {hostname}
-                          </span>
-                        </div>
-                      </a>
-
-                      <div className="pr-2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                        {isYoutube && (
-                          <button
-                            type="button"
-                            className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-red-500"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              setActiveVideoId(videoId)
-                            }}
-                          >
-                            <Play className="h-3.5 w-3.5 fill-current" />
-                          </button>
-                        )}
+                    <div className="flex items-center gap-3 p-3 bg-surface-container-low dark:bg-muted/10 rounded-lg border border-outline-variant/30 hover:border-primary transition-colors cursor-pointer group">
+                      <div className={cn("w-10 h-10 rounded flex items-center justify-center shrink-0", isYoutube ? "bg-red-100 dark:bg-red-950/40 text-red-600" : "bg-surface-container-highest dark:bg-muted/30 text-muted-foreground")}>
+                        {isYoutube ? <PlayCircle className="w-5 h-5" /> : <FaviconWithFallback url={resource.url} hostname={hostname} className="w-5 h-5" />}
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <p className="text-sm font-bold text-foreground truncate">{displayTitle}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{hostname}</p>
+                      </div>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <a
                           href={resource.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                          className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted transition-colors"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <ExternalLink className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-primary transition-colors" />
+                          <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors" />
                         </a>
                         <button
                           type="button"
-                          className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                          className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted transition-colors"
                           onClick={(e) => {
                             e.preventDefault()
+                            e.stopPropagation()
                             void handleDeleteResource(resource.id)
                           }}
                         >
-                          <Trash2 className="h-3.5 w-3.5 text-muted-foreground/60 hover:text-destructive transition-colors" />
+                          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive transition-colors" />
                         </button>
                       </div>
                     </div>
@@ -1392,10 +1458,9 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                   return (
                     <HoverCard key={resource.id} openDelay={300} closeDelay={150}>
                       <HoverCardTrigger asChild>
-                        {/* We wrap in a div so the HoverCard trigger works correctly over the whole row */}
                         <div>{standardCard}</div>
                       </HoverCardTrigger>
-                      <HoverCardContent side="left" align="start" sideOffset={12} className="w-72 p-3 overflow-hidden rounded-2xl shadow-xl dark:bg-zinc-950/95 dark:backdrop-blur-md">
+                      <HoverCardContent side="left" align="start" sideOffset={12} className="w-72 overflow-hidden rounded-xl p-3 shadow-lg">
                         {isYoutube ? (
                           <div className="space-y-3">
                             <div
@@ -1405,7 +1470,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                               <img
                                 src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
                                 alt={displayTitle}
-                                className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                                className="h-full w-full object-cover"
                               />
                               <div className="absolute inset-0 bg-black/20 flex items-center justify-center transition-colors hover:bg-black/30">
                                 <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-md backdrop-blur-sm">
@@ -1414,8 +1479,8 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                               </div>
                             </div>
                             <div>
-                              <h4 className="line-clamp-3 text-[13px] font-semibold text-primary/95 leading-snug">{displayTitle}</h4>
-                              <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                              <h4 className="line-clamp-3 text-sm font-semibold text-foreground leading-snug">{displayTitle}</h4>
+                              <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                                 <Youtube className="h-3.5 w-3.5 text-red-500" />
                                 YouTube Video
                               </div>
@@ -1423,45 +1488,45 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                           </div>
                         ) : (
                           <div className="space-y-2.5">
-                            <h4 className="line-clamp-4 text-[13px] font-semibold text-primary/90 leading-snug">{displayTitle}</h4>
-                            
+                            <h4 className="line-clamp-4 text-sm font-semibold text-foreground leading-snug">{displayTitle}</h4>
+
                             {(() => {
-                                const lower = hostname.toLowerCase();
-                                let BadgeIcon = null;
-                                let badgeText = "";
-                                let badgeClass = "";
-                                
-                                if (lower.includes("chatgpt.com") || lower.includes("claude.ai") || lower.includes("perplexity.ai")) {
-                                  BadgeIcon = Brain;
-                                  badgeText = "AI Assistant";
-                                  badgeClass = "bg-purple-500/10 text-purple-600 dark:text-purple-400";
-                                } else if (lower.includes("github.com") || lower.includes("stackoverflow.com")) {
-                                  BadgeIcon = Github;
-                                  badgeText = "Development";
-                                  badgeClass = "bg-blue-500/10 text-blue-600 dark:text-blue-400";
-                                } else if (lower.includes("figma.com") || lower.includes("dribbble.com")) {
-                                  BadgeIcon = Figma;
-                                  badgeText = "Design";
-                                  badgeClass = "bg-pink-500/10 text-pink-600 dark:text-pink-400";
-                                } else if (lower.includes("medium.com")) {
-                                  BadgeIcon = BookOpen;
-                                  badgeText = "Article";
-                                  badgeClass = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
-                                }
-                                
-                                if (BadgeIcon) {
-                                  return (
-                                    <div className="flex items-center">
-                                      <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider", badgeClass)}>
-                                        <BadgeIcon className="h-3 w-3" /> {badgeText}
-                                      </span>
-                                    </div>
-                                  );
-                                }
-                                return null;
+                              const lower = hostname.toLowerCase();
+                              let BadgeIcon = null;
+                              let badgeText = "";
+                              let badgeClass = "";
+
+                              if (lower.includes("chatgpt.com") || lower.includes("claude.ai") || lower.includes("perplexity.ai")) {
+                                BadgeIcon = Brain;
+                                badgeText = "AI Assistant";
+                                badgeClass = "bg-purple-500/10 text-purple-600 dark:text-purple-400";
+                              } else if (lower.includes("github.com") || lower.includes("stackoverflow.com")) {
+                                BadgeIcon = Github;
+                                badgeText = "Development";
+                                badgeClass = "bg-blue-500/10 text-blue-600 dark:text-blue-400";
+                              } else if (lower.includes("figma.com") || lower.includes("dribbble.com")) {
+                                BadgeIcon = Figma;
+                                badgeText = "Design";
+                                badgeClass = "bg-pink-500/10 text-pink-600 dark:text-pink-400";
+                              } else if (lower.includes("medium.com")) {
+                                BadgeIcon = BookOpen;
+                                badgeText = "Article";
+                                badgeClass = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+                              }
+
+                              if (BadgeIcon) {
+                                return (
+                                  <div className="flex items-center">
+                                    <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold", badgeClass)}>
+                                      <BadgeIcon className="h-3 w-3" /> {badgeText}
+                                    </span>
+                                  </div>
+                                );
+                              }
+                              return null;
                             })()}
 
-                            <div className="flex items-start gap-2 text-[11px] text-muted-foreground break-all whitespace-normal bg-muted/30 p-2 rounded-lg">
+                            <div className="flex items-start gap-2 text-xs text-muted-foreground break-all whitespace-normal bg-muted/50 p-2 rounded-lg">
                               <FaviconWithFallback url={resource.url} hostname={hostname} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                               <span className="opacity-80 line-clamp-3 leading-relaxed">{resource.url}</span>
                             </div>
@@ -1470,44 +1535,102 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                       </HoverCardContent>
                     </HoverCard>
                   )
-                })}
-            </div>
-          ) : (
-            <div className="px-1 py-2">
-              <p className="text-[13px] font-medium text-primary/80">No resources yet.</p>
-              <button
-                type="button"
-                className="mt-2.5 flex items-center gap-1.5 text-[13px] font-medium text-muted-foreground/80 hover:text-primary transition-colors"
-                onClick={(e) => {
-                  e.preventDefault()
-                  setResourceDialogOpen(true)
-                }}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                <span>Add your first resource</span>
-              </button>
-            </div>
-          )}
+                })
+            ) : (
+              <div className="py-6 px-4 text-center border-2 border-dashed border-outline-variant/30 rounded-lg">
+                <div className="w-12 h-12 bg-surface-container mx-auto rounded-full flex items-center justify-center mb-3">
+                  <Link2 className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-sm font-semibold text-foreground">No resources yet</p>
+                <p className="text-xs text-muted-foreground mt-1 mb-4">Add links, videos, or documents</p>
+              </div>
+            )}
+            
+            <button
+              type="button"
+              className="w-full py-3 mt-2 border-2 border-dashed border-outline-variant/60 rounded-lg flex items-center justify-center gap-2 text-muted-foreground text-sm font-semibold hover:bg-surface-container-low hover:border-primary hover:text-primary transition-all"
+              onClick={() => setResourceDialogOpen(true)}
+            >
+              <Link2 className="h-[18px] w-[18px]" />
+              Add New Resource
+            </button>
+          </div>
         </section>
 
-        {/* Linked DEEP commitment — below resources for calm context */}
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Brain className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-bold text-primary">Linked Deep Commitment</h3>
+        {/* Workspace Tasks */}
+        <section className="px-4 py-6 border-t border-border/5">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Workspace Tasks</h3>
+            <button
+              className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-muted transition-colors text-muted-foreground"
+              onClick={() => setTaskDialogOpen(true)}
+              title="Add task"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
           </div>
 
-          {linkedDeepTasks.length > 0 ? (
-            <div className="space-y-3">
-              {linkedDeepTasks.map((task) => (
-                <FocusTaskCard key={task.id} task={task} onUpdate={loadWorkspace} />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-white/50 bg-white/60 p-4 text-sm text-muted-foreground dark:border-white/10 dark:bg-white/[0.03]">
-              No DEEP task is linked to this workspace yet.
-            </div>
-          )}
+          <div className="space-y-2.5">
+            {workspaceTasks.length > 0 ? (
+              workspaceTasks.map((task) => {
+                if (task.status === "IN_PROGRESS") {
+                  return (
+                    <div key={task.id} className="p-4 bg-surface-container dark:bg-muted/10 rounded-lg border border-teal-500/30 shadow-sm relative overflow-hidden group transition-all">
+                      <div className="flex justify-between items-start mb-1 relative z-10">
+                        <p className="text-sm font-bold text-primary dark:text-teal-400 truncate max-w-[120px]">{task.title}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 text-[10px] font-bold rounded-full flex items-center gap-1 shadow-sm">
+                            <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-pulse shadow-[0_0_4px_rgba(20,184,166,0.8)]"></span> Current Focus
+                          </span>
+                          <button 
+                            className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleAbandonTask(task.id)}
+                            title="Abandon task"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-primary/70 dark:text-teal-400/70 uppercase tracking-tighter relative z-10">
+                        {task.taskType} • {task.durationMinutes}M
+                      </p>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div key={task.id} className="group relative flex flex-col gap-2 rounded-xl border border-muted/30 bg-muted/10 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{task.title}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">
+                          {task.taskType} • {task.durationMinutes}m
+                        </p>
+                      </div>
+                      {task.status === "COMPLETED" ? (
+                        <div className="flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2 py-0.5">
+                          <span className="text-[10px] font-medium text-indigo-500">Done</span>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => handleStartTask(task.id)}
+                        >
+                          Start
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            ) : (
+              <div className="px-1 py-1">
+                <p className="text-sm text-muted-foreground">No tasks linked.</p>
+              </div>
+            )}
+          </div>
         </section>
       </div>
     </div>
@@ -1520,11 +1643,11 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
           <BrandedLoader className="min-h-[70vh]" label="Loading workspace" />
         ) : loadError ? (
           <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6 lg:px-8">
-            <div className="rounded-3xl border border-destructive/20 bg-white/70 p-8 text-center shadow-sm backdrop-blur dark:bg-white/[0.03]">
+            <div className="rounded-2xl border border-destructive/20 bg-white/70 p-8 text-center shadow-sm backdrop-blur dark:bg-white/[0.03]">
               <AlertCircle className="mx-auto h-10 w-10 text-destructive" />
               <h1 className="mt-4 text-2xl font-black text-primary">Workspace unavailable</h1>
               <p className="mt-2 text-sm text-muted-foreground">{loadError}</p>
-              <Button className="mt-5 rounded-full" onClick={() => void loadWorkspace()}>
+              <Button className="mt-5 rounded-lg" onClick={() => void loadWorkspace()}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Reload workspace
               </Button>
@@ -1532,24 +1655,62 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
           </div>
         ) : workspace ? (
           <>
-            <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-              <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)_19rem]">
+            <div className="mx-auto max-w-[88rem] px-4 py-5 sm:px-6 lg:px-8">
+              <div className="grid gap-5 lg:grid-cols-[17rem_minmax(0,1fr)_18rem]">
                 {!isMobile && (
-                  <aside className="overflow-hidden rounded-3xl border border-white/50 bg-white/65 shadow-sm backdrop-blur dark:border-white/5 dark:bg-white/[0.03]">
+                  <aside className="workspace-panel overflow-hidden rounded-xl">
                     {navigationSurface}
                   </aside>
                 )}
 
-                <section className="relative min-w-0 bg-card rounded-3xl border border-black/[0.04] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_32px_rgba(0,0,0,0.03)] dark:border-white/[0.04]">
-                  <div className="px-6 pt-6 pb-6 min-h-[40vh]">
+                <section className={cn(
+                  "workspace-editor-shell relative min-w-0 rounded-2xl transition-all duration-700 overflow-hidden",
+                  inProgressTask ? "border-teal-500/30 shadow-[0_0_40px_-15px_rgba(20,184,166,0.15)]" : ""
+                )}>
+                  {inProgressTask && (
+                    <>
+                      <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-teal-500/5 to-transparent pointer-events-none" />
+                      <div className="absolute top-1/4 left-0 w-3/4 h-24 bg-primary/5 blur-2xl rounded-full animate-[breathing-glow_5s_ease-in-out_infinite] pointer-events-none -z-10" />
+                    </>
+                  )}
+                  <div className="px-6 pt-6 pb-7 min-h-[58vh] sm:px-8 relative z-10">
                     <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
                       <div className="min-w-0">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50">
-                          {workspace.sectionName || "Study Workspace"}
-                        </p>
-                        <h1 className="mt-1.5 truncate text-2xl font-bold tracking-tight text-foreground/85">
-                          {workspace.title}
-                        </h1>
+                        <div className="flex items-center gap-3">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            {workspace.sectionName || "STUDY WORKSPACE"} {inProgressTask ? `• ${workspace.title}` : ""}
+                          </p>
+                          {!inProgressTask && completedWorkspaceTime > 0 && (
+                            <>
+                              <span className="text-muted-foreground/30">•</span>
+                              <p className="text-xs font-semibold text-indigo-500/80 dark:text-indigo-400/80 flex items-center gap-1.5">
+                                <Clock className="h-3 w-3" />
+                                {formatHeaderTime(completedWorkspaceTime)}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 mt-1">
+                          <h1 className="truncate text-2xl font-bold tracking-tight text-foreground">
+                            {inProgressTask ? inProgressTask.title : workspace.title}
+                          </h1>
+                          
+                          {inProgressTask && (
+                            <div className="flex items-center gap-3 bg-surface-container-low dark:bg-muted/30 rounded-full px-3 py-1 border border-outline-variant/30 shadow-sm">
+                              <span className="text-sm font-bold text-primary dark:text-teal-400 tabular-nums">
+                                {formatElapsed(elapsed)}
+                              </span>
+                              <div className="w-px h-4 bg-outline-variant/40"></div>
+                              <button 
+                                className="text-muted-foreground hover:text-teal-600 transition-colors flex items-center justify-center" 
+                                title="Complete task"
+                                onClick={() => handleCompleteTask(inProgressTask.id)}
+                              >
+                                <CheckCircle className="h-5 w-5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -1558,7 +1719,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                             <Button
                               type="button"
                               variant="outline"
-                              className="rounded-full bg-white/80"
+                              className="rounded-lg"
                               onClick={() => handleNavigationSheetChange(true)}
                             >
                               <Menu className="mr-2 h-4 w-4" />
@@ -1567,7 +1728,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                             <Button
                               type="button"
                               variant="outline"
-                              className="rounded-full bg-white/80"
+                              className="rounded-lg"
                               onClick={() => handleContextSheetChange(true)}
                             >
                               <Info className="mr-2 h-4 w-4" />
@@ -1589,7 +1750,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                             <button
                               type="button"
                               onClick={() => setDeepWritingMode(true)}
-                              className="flex h-8 w-8 items-center justify-center rounded-xl transition-all duration-200 text-muted-foreground/40 hover:text-muted-foreground/70 hover:bg-black/[0.03] dark:hover:bg-white/[0.06]"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors duration-150 text-muted-foreground hover:text-foreground hover:bg-muted"
                               title="Enter deep writing"
                             >
                               <Maximize2 className="h-4 w-4" />
@@ -1601,7 +1762,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
 
                     {actionError && (
                       <div className="mb-4">
-                        <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-destructive/70">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive/70">
                           <span className="h-1.5 w-1.5 rounded-full bg-destructive/50" />
                           {actionError}
                         </span>
@@ -1610,7 +1771,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
 
                     {/* Writing surface — no toolbar, cursor is the primary interaction */}
                     <div
-                      className="study-surface-gradient rounded-xl px-6 py-5"
+                      className="study-surface-gradient min-h-[42vh] rounded-xl px-5 py-5 sm:px-6"
                       onClick={(e) => {
                         if (e.target === e.currentTarget) {
                           void handleCreateEntry(null, "BULLET")
@@ -1649,7 +1810,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                           className="flex flex-col items-start py-6 cursor-text"
                           onClick={() => void handleCreateEntry(null, "BULLET")}
                         >
-                          <p className="text-[15px] text-muted-foreground/25 select-none font-normal">Start thinking...</p>
+                          <p className="text-sm text-muted-foreground/35 select-none font-normal">Start thinking...</p>
                         </div>
                       )}
 
@@ -1668,7 +1829,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                 </section>
 
                 {!isMobile && (
-                  <aside className="overflow-hidden rounded-3xl border border-white/50 bg-white/65 shadow-sm backdrop-blur dark:border-white/5 dark:bg-white/[0.03]">
+                  <aside className="workspace-panel overflow-hidden rounded-xl">
                     {contextSurface}
                   </aside>
                 )}
@@ -1745,7 +1906,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
             />
 
             <Dialog open={activeVideoId !== null} onOpenChange={(open) => !open && setActiveVideoId(null)}>
-              <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black aspect-video rounded-3xl border-none">
+              <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black aspect-video rounded-2xl border-none">
                 {activeVideoId && (
                   <iframe
                     src={`https://www.youtube.com/embed/${activeVideoId}?autoplay=1`}
@@ -1777,7 +1938,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
             )}
           >
             <div className="min-w-0">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground/40">
+              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">
                 {workspace.sectionName || "Study Workspace"}
               </p>
               <h2 className="mt-0.5 truncate text-base font-bold tracking-tight text-foreground/60">
@@ -1837,7 +1998,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                     className="flex flex-col items-start py-6 cursor-text"
                     onClick={() => void handleCreateEntry(null, "BULLET")}
                   >
-                    <p className="text-[15px] text-muted-foreground/25 select-none font-normal">Start thinking...</p>
+                    <p className="text-sm text-muted-foreground/25 select-none font-normal">Start thinking...</p>
                   </div>
                 )}
 
@@ -1856,6 +2017,14 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
           </div>
         </div>
       )}
+
+      <CreateTaskDialog
+        open={taskDialogOpen}
+        onOpenChange={setTaskDialogOpen}
+        onSuccess={loadWorkspace}
+        defaultWorkspaceId={workspaceId}
+      />
+
     </AuthGuard>
   )
 }

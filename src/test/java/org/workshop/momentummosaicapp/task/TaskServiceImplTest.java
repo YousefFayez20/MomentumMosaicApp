@@ -41,7 +41,7 @@ class TaskServiceImplTest {
         when(appUserRepository.findById(userId)).thenReturn(Optional.of(appUser));
         when(taskRepository.save(any(Task.class))).thenAnswer(invocationOnMock -> invocationOnMock.getArgument(0));
         LocalDate plannedForDate = LocalDate.of(2026, 5, 19);
-        Task task = taskService.createTask("Study",userId,TaskType.SHALLOW,60, plannedForDate);
+        Task task = taskService.createTask("Study",userId,TaskType.SHALLOW,60, plannedForDate, null);
         assertEquals("Study",task.getTitle());
         assertEquals(60, task.getDurationMinutes());
         assertEquals(plannedForDate, task.getPlannedForDate());
@@ -58,7 +58,7 @@ class TaskServiceImplTest {
         AppUser appUser = new AppUser();
         appUser.setEnabled(true);
         appUser.setId(userId);
-        assertThrows(BadRequestException.class,() ->taskService.createTask("Studying Docker",userId,TaskType.DEEP,90, LocalDate.now()));
+        assertThrows(BadRequestException.class,() ->taskService.createTask("Studying Docker",userId,TaskType.DEEP,90, LocalDate.now(), null));
         verifyNoInteractions(appUserRepository);
         verifyNoInteractions(taskRepository);
     }
@@ -79,7 +79,7 @@ class TaskServiceImplTest {
         when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
         when(taskRepository.save(task)).thenReturn(task);
         LocalDate plannedForDate = LocalDate.of(2026, 5, 20);
-        taskService.updateTask(1L,1L,"Gym",TaskType.FITNESS,60, plannedForDate);
+        taskService.updateTask(1L,1L,"Gym",TaskType.FITNESS,60, plannedForDate, null);
         assertEquals("Gym",task.getTitle());
         assertEquals(60, task.getDurationMinutes());
         assertEquals(plannedForDate, task.getPlannedForDate());
@@ -117,7 +117,7 @@ class TaskServiceImplTest {
         when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
 
         assertThrows(ForbiddenException.class, () ->
-                taskService.updateTask(1L, 1L, "Hack", TaskType.FITNESS, 60, LocalDate.now())
+                taskService.updateTask(1L, 1L, "Hack", TaskType.FITNESS, 60, LocalDate.now(), null)
         );
     }
 

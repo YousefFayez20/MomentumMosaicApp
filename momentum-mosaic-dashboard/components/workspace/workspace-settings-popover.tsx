@@ -128,7 +128,7 @@ export function WorkspaceSettingsPopover({
               <button
                 type="button"
                 onClick={() => setMode("rename")}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium text-muted-foreground hover:bg-primary/[0.07] hover:text-primary transition-colors"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-muted-foreground hover:bg-primary/[0.07] hover:text-primary transition-colors"
               >
                 <Pencil className="h-3.5 w-3.5" />
                 Rename
@@ -136,7 +136,7 @@ export function WorkspaceSettingsPopover({
               <button
                 type="button"
                 onClick={() => setMode("move")}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium text-muted-foreground hover:bg-primary/[0.07] hover:text-primary transition-colors"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-muted-foreground hover:bg-primary/[0.07] hover:text-primary transition-colors"
               >
                 <ChevronRight className="h-3.5 w-3.5" />
                 Move to Section
@@ -146,7 +146,7 @@ export function WorkspaceSettingsPopover({
                 type="button"
                 onClick={() => void handleArchive()}
                 disabled={busy}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium text-muted-foreground hover:bg-black/[0.04] hover:text-foreground/80 transition-colors disabled:opacity-40"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-muted-foreground hover:bg-black/[0.04] hover:text-foreground/80 transition-colors disabled:opacity-40"
               >
                 <Archive className="h-3.5 w-3.5" />
                 Archive
@@ -154,7 +154,7 @@ export function WorkspaceSettingsPopover({
               <button
                 type="button"
                 onClick={() => setMode("confirmDelete")}
-                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium text-muted-foreground hover:bg-destructive/[0.07] hover:text-destructive transition-colors"
+                className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium text-muted-foreground hover:bg-destructive/[0.07] hover:text-destructive transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Delete
@@ -164,7 +164,7 @@ export function WorkspaceSettingsPopover({
 
           {mode === "rename" && (
             <div className="p-2.5">
-              <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground/50">
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground/50">
                 Rename workspace
               </p>
               <input
@@ -178,14 +178,14 @@ export function WorkspaceSettingsPopover({
                   if (e.key === "Escape") handleClose()
                 }}
                 disabled={busy}
-                className="w-full rounded-lg border border-black/[0.08] bg-white/80 px-2.5 py-1.5 text-[13px] font-medium text-primary placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-white/10 dark:bg-white/[0.06]"
+                className="w-full rounded-lg border border-black/[0.08] bg-white/80 px-2.5 py-1.5 text-sm font-medium text-primary placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30 dark:border-white/10 dark:bg-white/[0.06]"
               />
               <div className="mt-2 flex gap-1.5">
                 <button
                   type="button"
                   onClick={() => void handleRenameSubmit()}
                   disabled={busy || !renameDraft.trim()}
-                  className="flex-1 rounded-lg bg-primary/[0.09] px-2.5 py-1.5 text-[12px] font-semibold text-primary transition-colors hover:bg-primary/[0.15] disabled:opacity-40"
+                  className="flex-1 rounded-lg bg-primary/[0.09] px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/[0.15] disabled:opacity-40"
                 >
                   Save
                 </button>
@@ -193,7 +193,7 @@ export function WorkspaceSettingsPopover({
                   type="button"
                   onClick={handleClose}
                   disabled={busy}
-                  className="flex-1 rounded-lg bg-black/[0.04] px-2.5 py-1.5 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-black/[0.07] dark:bg-white/[0.05]"
+                  className="flex-1 rounded-lg bg-black/[0.04] px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-black/[0.07] dark:bg-white/[0.05]"
                 >
                   Cancel
                 </button>
@@ -203,7 +203,7 @@ export function WorkspaceSettingsPopover({
 
           {mode === "move" && (
             <div className="py-1">
-              <p className="px-3 pb-1 pt-2 text-[11px] font-bold uppercase tracking-[0.14em] text-muted-foreground/50">
+              <p className="px-3 pb-1 pt-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/50">
                 Move to section
               </p>
               <button
@@ -219,7 +219,7 @@ export function WorkspaceSettingsPopover({
                 }}
                 disabled={busy || currentSectionId === null}
                 className={cn(
-                  "flex w-full items-center px-3 py-2 text-left text-[13px] font-medium transition-colors",
+                  "flex w-full items-center px-3 py-2 text-left text-sm font-medium transition-colors",
                   currentSectionId === null
                     ? "text-primary bg-primary/[0.06] cursor-default"
                     : "text-muted-foreground hover:bg-primary/[0.06] hover:text-primary",
@@ -243,7 +243,7 @@ export function WorkspaceSettingsPopover({
                   }}
                   disabled={busy || currentSectionId === sec.id}
                   className={cn(
-                    "flex w-full items-center px-3 py-2 text-left text-[13px] font-medium transition-colors",
+                    "flex w-full items-center px-3 py-2 text-left text-sm font-medium transition-colors",
                     currentSectionId === sec.id
                       ? "text-primary bg-primary/[0.06] cursor-default"
                       : "text-muted-foreground hover:bg-primary/[0.06] hover:text-primary",
@@ -257,7 +257,7 @@ export function WorkspaceSettingsPopover({
               <button
                 type="button"
                 onClick={() => setMode("menu")}
-                className="flex w-full items-center px-3 py-2 text-left text-[12px] font-medium text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                className="flex w-full items-center px-3 py-2 text-left text-xs font-medium text-muted-foreground/60 hover:text-muted-foreground transition-colors"
               >
                 ← Back
               </button>
@@ -266,8 +266,8 @@ export function WorkspaceSettingsPopover({
 
           {mode === "confirmDelete" && (
             <div className="p-2.5">
-              <p className="mb-1 text-[12px] font-semibold text-foreground/80">Delete workspace?</p>
-              <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground/70">
+              <p className="mb-1 text-sm font-semibold text-foreground/80">Delete workspace?</p>
+              <p className="mb-3 text-xs leading-relaxed text-muted-foreground/70">
                 All entries and resources will be permanently lost.
               </p>
               <div className="flex gap-1.5">
@@ -275,7 +275,7 @@ export function WorkspaceSettingsPopover({
                   type="button"
                   onClick={() => void handleDeleteConfirm()}
                   disabled={busy}
-                  className="flex-1 rounded-lg bg-destructive/[0.09] px-2.5 py-1.5 text-[12px] font-semibold text-destructive transition-colors hover:bg-destructive/[0.16] disabled:opacity-40"
+                  className="flex-1 rounded-lg bg-destructive/[0.09] px-2.5 py-1.5 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/[0.16] disabled:opacity-40"
                 >
                   Delete
                 </button>
@@ -283,7 +283,7 @@ export function WorkspaceSettingsPopover({
                   type="button"
                   onClick={handleClose}
                   disabled={busy}
-                  className="flex-1 rounded-lg bg-black/[0.04] px-2.5 py-1.5 text-[12px] font-semibold text-muted-foreground transition-colors hover:bg-black/[0.07] dark:bg-white/[0.05]"
+                  className="flex-1 rounded-lg bg-black/[0.04] px-2.5 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-black/[0.07] dark:bg-white/[0.05]"
                 >
                   Cancel
                 </button>

@@ -177,6 +177,7 @@ export class ApiClient {
       taskType: "DEEP" | "SHALLOW" | "FITNESS"
       durationMinutes: number
       plannedForDate?: string | null
+      workspaceId?: number | null
     },
   ) {
     return this.request<TaskResponse>(`/api/tasks`, {
@@ -192,6 +193,7 @@ export class ApiClient {
       taskType?: "DEEP" | "SHALLOW" | "FITNESS"
       durationMinutes?: number
       plannedForDate?: string | null
+      workspaceId?: number | null
     },
   ) {
     return this.request<TaskResponse>(`/api/tasks/${taskId}`, {

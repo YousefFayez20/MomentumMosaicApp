@@ -54,6 +54,16 @@ export function WorkspaceEntryItem({
 
   const hasChildren = entry.children.length > 0
   const isCollapsed = entry.entryType === "TOGGLE" && entry.collapsed
+  const syncLabel =
+    saveState === "dirty"
+      ? "Unsaved"
+      : saveState === "saving"
+        ? "Saving"
+        : saveState === "saved"
+          ? "Saved"
+          : saveState === "error"
+            ? "Sync failed"
+            : ""
 
   const syncSaveState = (nextState: EntrySaveState, nextError = "") => {
     setSaveState(nextState)
@@ -199,13 +209,13 @@ export function WorkspaceEntryItem({
 
   return (
     <div className="group/entry entry-appear" style={{ paddingLeft: `${depth * 20}px` }}>
-      <div className="flex items-start gap-3 py-0.5 -mx-2 px-2 transition-all duration-200 ease-out rounded-lg hover:bg-primary/[0.03] focus-within:bg-primary/[0.05] focus-within:ring-1 focus-within:ring-primary/[0.08]">
+      <div className="flex items-start gap-3 py-1 -mx-2 px-2 transition-colors duration-150 ease-out rounded-md hover:bg-muted/45 focus-within:bg-muted/55 focus-within:ring-1 focus-within:ring-primary/10">
         <div className="mt-[9px] shrink-0">
           {entry.entryType === "TOGGLE" ? (
             <button
               type="button"
               aria-label={entry.collapsed ? "Expand section" : "Collapse section"}
-              className="flex items-center justify-center p-0.5 rounded text-muted-foreground/40 transition-all duration-200 hover:text-muted-foreground/70 hover:bg-black/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20"
+              className="flex items-center justify-center p-0.5 rounded text-muted-foreground/50 transition-colors duration-150 hover:text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/20"
               onClick={() => onToggleCollapse(entry, !entry.collapsed)}
             >
               <ChevronRight
@@ -213,7 +223,7 @@ export function WorkspaceEntryItem({
               />
             </button>
           ) : (
-            <span className="block h-[5px] w-[5px] rounded-full bg-primary/50" />
+          <span className="block h-[5px] w-[5px] rounded-full bg-muted-foreground/45 transition-colors group-focus-within/entry:bg-primary group-hover/entry:bg-primary/65" />
           )}
         </div>
 
@@ -228,27 +238,37 @@ export function WorkspaceEntryItem({
             onBlur={() => {
               if (saveState === "dirty" || saveState === "error") void persistDraft()
             }}
-            className="w-full resize-none overflow-hidden bg-transparent text-[15.5px] leading-[1.75] font-[410] text-foreground/90 focus:outline-none placeholder:text-muted-foreground/30 tracking-[-0.01em]"
+            className="w-full resize-none overflow-hidden bg-transparent text-[15px] leading-7 font-normal text-foreground/90 focus:outline-none placeholder:text-muted-foreground/35"
           />
 
-          {saveState === "error" && (
-            <div className="mt-1 flex items-center gap-2">
-              <span className="text-[11px] text-muted-foreground/50">Unable to sync.</span>
+          {(syncLabel || saveState === "error") && (
+            <div
+              className={cn(
+                "mt-1 flex items-center gap-2 text-xs",
+                saveState === "error" ? "text-destructive/80" : "text-muted-foreground/55",
+              )}
+            >
+              <span>{saveState === "error" ? errorMessage || "Unable to sync." : syncLabel}</span>
+              {saveState === "saving" && (
+                <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
+              )}
+              {saveState === "error" && (
               <button
                 type="button"
-                className="text-[11px] text-primary/60 underline transition-colors hover:text-primary"
+                className="font-medium text-primary underline-offset-2 transition-colors hover:text-primary/80"
                 onClick={() => void persistDraft()}
               >
                 Retry
               </button>
+              )}
             </div>
           )}
         </div>
 
-        <div className="relative mt-[9px] flex items-center gap-1 opacity-0 transition-opacity duration-300 group-hover/entry:opacity-100 focus-within:opacity-100">
+        <div className="relative mt-[9px] flex items-center gap-1 opacity-35 transition-opacity duration-150 group-hover/entry:opacity-100 focus-within:opacity-100">
           <button
             type="button"
-            className="p-1 text-muted-foreground/30 transition-colors duration-200 hover:text-muted-foreground/60 rounded-md hover:bg-black/[0.04]"
+            className="p-1 text-muted-foreground/50 transition-colors duration-150 hover:text-foreground rounded-md hover:bg-muted"
             tabIndex={-1}
             aria-label="Drag to reorder"
           >
@@ -256,7 +276,7 @@ export function WorkspaceEntryItem({
           </button>
           <button
             type="button"
-            className="p-1 text-muted-foreground/30 transition-colors duration-200 hover:text-destructive rounded-md hover:bg-black/[0.04]"
+            className="p-1 text-muted-foreground/50 transition-colors duration-150 hover:text-destructive rounded-md hover:bg-muted"
             tabIndex={-1}
             aria-label="Delete line"
             onClick={() => onDelete(entry)}
@@ -266,7 +286,7 @@ export function WorkspaceEntryItem({
           <div className="relative">
             <button
               type="button"
-              className="p-1 text-muted-foreground/30 transition-colors duration-200 hover:text-muted-foreground/60 rounded-md hover:bg-black/[0.04]"
+              className="p-1 text-muted-foreground/50 transition-colors duration-150 hover:text-foreground rounded-md hover:bg-muted"
               tabIndex={-1}
               aria-label="More options"
               onClick={() => setTypeMenuOpen((v) => !v)}
@@ -277,13 +297,13 @@ export function WorkspaceEntryItem({
             {typeMenuOpen && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setTypeMenuOpen(false)} />
-                <div className="absolute right-0 top-full z-20 mt-1.5 overflow-hidden rounded-xl border border-black/[0.06] bg-white/95 shadow-xl shadow-black/[0.08] backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/95 min-w-[130px] py-1 animate-in fade-in-0 zoom-in-95 duration-150">
+                <div className="absolute right-0 top-full z-20 mt-1.5 overflow-hidden rounded-lg border border-border bg-popover shadow-lg min-w-[130px] py-1 animate-in fade-in-0 zoom-in-95 duration-150">
                   {(["BULLET", "TOGGLE"] as WorkspaceEntryType[]).map((type) => (
                     <button
                       key={type}
                       type="button"
                       className={cn(
-                        "flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] font-medium transition-colors hover:bg-primary/10",
+                        "flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-muted",
                         entry.entryType === type ? "text-primary" : "text-muted-foreground",
                       )}
                       onClick={() => {
