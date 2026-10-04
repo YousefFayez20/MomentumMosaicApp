@@ -3,7 +3,6 @@
 import { useEffect } from "react"
 import Link from "next/link"
 import {
-  Activity,
   ArrowRight,
   Brain,
   CheckCircle2,
@@ -12,10 +11,9 @@ import {
   Dumbbell,
   FileText,
   Flame,
-  ListChecks,
-  Play,
   Sparkles,
   Zap,
+  Circle
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
@@ -50,12 +48,6 @@ const featureCards = [
   },
 ]
 
-const taskSequence = [
-  { label: "Deep Work", title: "Design review and product notes", time: "75m", icon: Brain, accent: "bg-indigo-500" },
-  { label: "Shallow Work", title: "Admin queue and inbox sweep", time: "25m", icon: Zap, accent: "bg-sky-500" },
-  { label: "Fitness", title: "Evening strength session", time: "45m", icon: Dumbbell, accent: "bg-emerald-500" },
-]
-
 const notePreview = [
   { text: "Capture today's decision points", checked: true },
   { text: "Turn messy ideas into toggle lists", checked: true },
@@ -81,297 +73,300 @@ export default function HomePage() {
   }
 
   return (
-    <main className="premium-shell min-h-screen overflow-hidden text-foreground">
-      <header className="sticky top-0 z-50 border-b border-white/60 bg-background/75 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen overflow-x-hidden bg-[#FAFAFA] text-[#0b1c30] font-sans selection:bg-blue-600/20 selection:text-blue-900">
+      {/* Top Navigation */}
+      <header className="sticky top-0 z-50 w-full bg-[#FAFAFA]/80 backdrop-blur-xl border-b border-slate-200/50">
+        <div className="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-16">
           <Link href="/" aria-label="Momentum Mosaic home">
             <AppLogo size="header" wordmarkClassName="hidden sm:inline" />
           </Link>
-          <nav className="hidden items-center gap-6 text-sm font-medium text-muted-foreground md:flex">
-            <a href="#features" className="transition hover:text-foreground">Features</a>
-            <a href="#notes" className="transition hover:text-foreground">Notes preview</a>
+          <nav className="hidden items-center gap-10 text-[16px] font-semibold text-slate-500 md:flex">
+            <a href="#features" className="transition-colors hover:text-[#0b1c30]">Philosophy</a>
+            <a href="#notes" className="transition-colors hover:text-[#0b1c30]">Journal</a>
+            <a href="#notes" className="transition-colors hover:text-[#0b1c30]">Library</a>
+            <a href="#notes" className="transition-colors hover:text-[#0b1c30]">Growth Maps</a>
           </nav>
-          <Button onClick={handleGoogleLogin} className="rounded-lg px-5 shadow-lg shadow-primary/15">
-            Sign in
-            <ArrowRight className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={handleGoogleLogin} className="hidden sm:inline-flex text-slate-500 hover:text-[#0b1c30] font-semibold text-[14px]">
+              Sign In
+            </Button>
+            <Button onClick={handleGoogleLogin} className="rounded-lg px-6 shadow-lg shadow-blue-600/20 bg-blue-600 text-white hover:bg-blue-700 transition-all active:scale-95 text-[14px] font-semibold font-sans">
+              Watch Demo
+            </Button>
+          </div>
         </div>
       </header>
 
-      <section className="relative mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl grid-cols-1 items-center gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[0.92fr_1.08fr] lg:px-8 lg:py-20">
-        <div className="landing-noise" aria-hidden="true" />
-        <div className="relative z-10 max-w-2xl reveal-up">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/10 bg-card/70 px-3 py-1 text-xs font-semibold uppercase text-muted-foreground shadow-sm backdrop-blur">
-            <Sparkles className="h-3.5 w-3.5 text-accent" />
+      {/* Hero Section */}
+      <section className="relative mx-auto grid min-h-[calc(100vh-5rem)] max-w-[1440px] grid-cols-1 items-center gap-16 px-4 py-16 lg:grid-cols-12 lg:px-16 lg:py-24">
+        
+        {/* Hero Content */}
+        <div className="relative z-10 lg:col-span-5 space-y-10 reveal-up">
+          <div className="inline-flex items-center gap-2 rounded-full border border-slate-200/60 bg-white px-5 py-2 text-xs font-bold uppercase tracking-wider text-blue-600 shadow-sm">
             Premium daily discipline system
           </div>
-          <h1 className="text-5xl font-black leading-[0.95] text-primary sm:text-6xl lg:text-7xl">
-            Momentum Mosaic
+          <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-[#0b1c30] sm:text-6xl lg:text-[56px] lg:leading-[64px]">
+            Momentum <br /><span className="text-blue-600">Mosaic</span>
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-8 text-muted-foreground sm:text-xl">
-            {APP_DESCRIPTION} Built for people who want a calm command center for focused work, fitness, and daily follow-through.
+          <p className="max-w-md text-lg italic font-medium leading-relaxed text-slate-500 font-serif">
+            {APP_DESCRIPTION} A calm command center for focused work, fitness, and daily follow-through.
           </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button onClick={handleGoogleLogin} size="lg" className="h-12 rounded-lg px-6 shadow-xl shadow-primary/15">
+          <div className="flex flex-col gap-5 sm:flex-row pt-6">
+            <Button onClick={handleGoogleLogin} size="lg" className="group flex h-14 items-center justify-center gap-3 rounded-xl bg-blue-600 px-8 text-[14px] font-semibold text-white shadow-[0_4px_14px_0_rgba(37,99,235,0.2)] transition-all hover:-translate-y-[1px] hover:shadow-[0_6px_20px_rgba(37,99,235,0.3)] active:scale-95">
+              <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#ffffff" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#ffffff" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#ffffff" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#ffffff" />
+              </svg>
               Continue with Google
-              <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button asChild size="lg" variant="outline" className="h-12 rounded-lg border-primary/15 bg-card/70 px-6 backdrop-blur">
+            <Button asChild size="lg" variant="outline" className="flex h-14 items-center justify-center rounded-xl border border-slate-200/80 bg-white px-8 text-[14px] font-semibold text-[#0b1c30] shadow-sm transition-all hover:border-slate-300 hover:shadow-md active:scale-95">
               <a href="#features">
                 Explore features
-                <ArrowRight className="h-4 w-4" />
               </a>
             </Button>
           </div>
-          <div className="mt-8 grid max-w-lg grid-cols-3 gap-3 text-sm">
-            {["Plan", "Execute", "Compound"].map((item) => (
-              <div key={item} className="rounded-lg border border-primary/10 bg-card/65 px-3 py-2 font-semibold text-primary shadow-sm backdrop-blur">
-                {item}
-              </div>
-            ))}
-          </div>
         </div>
 
-        <div className="relative z-10 reveal-up reveal-delay-1">
+        {/* Product Preview */}
+        <div className="relative lg:col-span-7 reveal-up reveal-delay-1">
           <ProductPreview />
         </div>
       </section>
 
-      <section id="features" className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+      {/* Feature Section */}
+      <section id="features" className="mx-auto max-w-[1440px] px-4 py-16 sm:px-6 sm:py-20 lg:px-16">
         <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="mb-3 text-xs font-semibold uppercase text-accent">Core features</p>
-            <h2 className="text-3xl font-black text-primary sm:text-4xl">A focused workflow with premium restraint.</h2>
+            <p className="mb-3 text-xs font-bold uppercase tracking-wider text-blue-600">Core features</p>
+            <h2 className="text-3xl font-extrabold tracking-tight text-[#0b1c30] sm:text-4xl">A focused workflow with premium restraint.</h2>
           </div>
-          <p className="max-w-xl text-muted-foreground">
+          <p className="max-w-xl text-lg text-slate-500 font-medium">
             The public story matches what users see after login: task rails, a discipline shell, and calm surfaces that make the app feel composed.
           </p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {featureCards.map((feature) => {
             const Icon = feature.icon
             return (
-              <article key={feature.title} className="group rounded-lg border bg-card/80 p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10">
-                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
-                  <Icon className="h-5 w-5" />
+              <article key={feature.title} className="group rounded-2xl border border-slate-200/60 bg-white p-6 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.03)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_10px_30px_-10px_rgba(37,99,235,0.1)]">
+                <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-600 transition group-hover:bg-blue-600 group-hover:text-white">
+                  <Icon className="h-6 w-6" />
                 </div>
-                <h3 className="font-bold text-primary">{feature.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{feature.description}</p>
+                <h3 className="font-bold text-[#0b1c30] text-[18px]">{feature.title}</h3>
+                <p className="mt-2 text-[16px] leading-relaxed text-slate-500">{feature.description}</p>
               </article>
             )
           })}
         </div>
       </section>
 
-      <section id="notes" className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 sm:pb-20 lg:px-8">
-        <div className="rounded-lg border bg-card/80 p-6 shadow-sm">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-accent/10 text-accent">
-              <FileText className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-black text-primary">Study workspace preview</h2>
-              <p className="text-sm text-muted-foreground">A plain-text workspace for focused thinking, quick capture, and one active block at a time.</p>
-            </div>
+      {/* Footer */}
+      <footer className="w-full bg-[#FAFAFA] border-t border-slate-200/50 mt-12">
+        <div className="mx-auto flex max-w-[1440px] flex-col items-center justify-between gap-6 px-4 py-8 sm:px-6 md:flex-row lg:px-16">
+          <div className="flex items-center gap-4">
+            <span className="text-[14px] font-bold text-[#0b1c30]">Momentum Mosaic</span>
+            <span className="text-[12px] font-semibold text-slate-500/80">© 2024. All rights reserved.</span>
           </div>
-          <div className="rounded-lg border bg-background/70 p-4 font-mono text-sm shadow-inner">
-            <p className="text-muted-foreground"># Today&apos;s operating notes</p>
-            <div className="mt-4 space-y-3">
-              {notePreview.map((note) => (
-                <div key={note.text} className="flex items-start gap-3">
-                  <span className="mt-0.5 text-accent">{note.checked ? "[x]" : "[ ]"}</span>
-                  <span>{note.text}</span>
-                </div>
-              ))}
-            </div>
-            <p className="mt-5 text-muted-foreground">- Draft next task sequence before opening the dashboard</p>
+          <div className="flex items-center gap-8">
+            <a href="#" className="text-[12px] font-semibold text-slate-500 transition-colors hover:text-[#0b1c30]">Privacy Policy</a>
+            <a href="#" className="text-[12px] font-semibold text-slate-500 transition-colors hover:text-[#0b1c30]">Terms of Service</a>
+            <a href="#" className="text-[12px] font-semibold text-slate-500 transition-colors hover:text-[#0b1c30]">Contact</a>
           </div>
         </div>
-      </section>
+      </footer>
     </main>
   )
 }
 
 function ProductPreview() {
   return (
-    <div className="relative mx-auto w-full max-w-4xl">
-      {/* Background ambient glow behind the preview */}
-      <div className="absolute inset-0 -m-8 bg-primary/10 blur-[100px] rounded-full" aria-hidden="true" />
+    <div className="relative w-full">
+      {/* Decorative Glows */}
+      <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-blue-600/10 blur-[120px] pointer-events-none" />
+      <div className="absolute -bottom-32 -left-32 h-96 w-96 rounded-full bg-blue-300/10 blur-[120px] pointer-events-none" />
       
-      {/* Main Container - The Operating System Window */}
+      {/* Main Mosaic Shell */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: [0, -6, 0] }}
-        transition={{
-          opacity: { duration: 0.8, ease: "easeOut" },
-          y: { duration: 12, repeat: Infinity, ease: "easeInOut", delay: 0.8 }
-        }}
-        className="relative z-10 rounded-[2rem] border border-primary/10 bg-card/85 p-4 shadow-2xl backdrop-blur-2xl sm:p-5"
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="relative overflow-hidden rounded-[1.5rem] border border-slate-200/60 bg-white/90 p-6 shadow-[0_30px_60px_-10px_rgba(0,0,0,0.03),0_10px_20px_-5px_rgba(0,0,0,0.02)] backdrop-blur-3xl md:rounded-[2rem] md:p-12"
       >
-        <div className="grid gap-4 sm:grid-cols-12">
+        {/* Premium SVG Connections - Continuity Flow */}
+        <svg className="absolute inset-0 z-0 h-full w-full pointer-events-none" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="vectorGrad" x1="0%" x2="100%" y1="0%" y2="100%">
+              <stop offset="0%" stopColor="#2563eb" stopOpacity="0" />
+              <stop offset="50%" stopColor="#2563eb" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#2563eb" stopOpacity="0" />
+            </linearGradient>
+            <filter id="glow">
+              <feGaussianBlur result="coloredBlur" stdDeviation="3" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          {/* Continuous flow from Active Session to Workspace Notes */}
+          <path 
+            d="M 150 150 C 300 150, 300 650, 650 650" 
+            fill="none" stroke="#E5E7EB" strokeWidth="1" 
+          />
+          <motion.path 
+            d="M 150 150 C 300 150, 300 650, 650 650" 
+            fill="none" filter="url(#glow)" stroke="url(#vectorGrad)" strokeWidth="1.5"
+            initial={{ strokeDasharray: "8 20", strokeDashoffset: 1000 }}
+            animate={{ strokeDashoffset: 0 }}
+            transition={{ duration: 20, ease: "linear", repeat: Infinity }}
+          />
+          {/* Flow from Momentum Score to Today's Sequence */}
+          <path 
+            d="M 650 150 C 500 150, 500 650, 150 650" 
+            fill="none" stroke="#E5E7EB" strokeWidth="1" 
+          />
+          <motion.path 
+            d="M 650 150 C 500 150, 500 650, 150 650" 
+            fill="none" filter="url(#glow)" stroke="url(#vectorGrad)" strokeWidth="1.5"
+            initial={{ strokeDasharray: "8 20", strokeDashoffset: 1000 }}
+            animate={{ strokeDashoffset: 0 }}
+            transition={{ duration: 20, ease: "linear", repeat: Infinity }}
+          />
+          {/* Horizontal bridge */}
+          <path 
+            d="M 250 250 L 550 250" 
+            fill="none" stroke="#E5E7EB" strokeDasharray="4 4" strokeWidth="1" 
+          />
+        </svg>
+
+        <div className="relative z-10 grid gap-6 md:grid-cols-2 md:grid-rows-2">
           
-          {/* Top Left: Active Focus Session (Immersive) */}
-          <div className="flex flex-col justify-between rounded-[1.5rem] border border-indigo-500/20 bg-indigo-500/5 p-6 sm:col-span-8 relative overflow-hidden">
-             {/* Subtle glow behind the active task */}
-             <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-indigo-500/20 blur-[50px]" />
-             
-             <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex w-fit items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                  <span className="relative flex h-2 w-2">
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-indigo-500" />
-                  </span>
-                  Focus Mode Active
-                </div>
-                <div className="font-mono text-xs font-medium text-indigo-600/70 dark:text-indigo-400/70 tracking-wider">SESSION_01</div>
-             </div>
-             
-             <div className="relative z-10 mt-10 mb-8">
-               <h3 className="text-3xl font-black text-foreground sm:text-4xl tracking-tight">System architecture</h3>
-               <p className="mt-2 text-sm font-medium text-muted-foreground flex items-center gap-2">
-                 <Brain className="h-4 w-4" />
-                 Deep work • 75m planned
-               </p>
-             </div>
-             
-             <div className="relative z-10 flex items-center gap-5">
-               <div className="font-mono text-4xl font-light text-foreground tracking-tighter">34:12</div>
-               <div className="h-1.5 flex-1 bg-indigo-500/10 overflow-hidden rounded-full">
-                 <div className="h-full bg-indigo-500 w-[45%] rounded-full relative">
-                   <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-r from-transparent to-white/50 blur-[2px]" />
-                 </div>
-               </div>
-               <div className="font-mono text-sm font-medium text-indigo-600 dark:text-indigo-400">45%</div>
-             </div>
-          </div>
-          
-          {/* Top Right: Momentum Score Centerpiece */}
-          <div className="flex flex-col items-center justify-center rounded-[1.5rem] border border-primary/10 bg-muted/30 p-6 sm:col-span-4 relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-50" />
-            
-            <div className="relative flex h-32 w-32 items-center justify-center">
-              <svg className="absolute inset-0 h-full w-full -rotate-90 transform" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="2" className="text-primary/10" />
-                <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray="289" strokeDashoffset="52" className="text-primary transition-all duration-1000" strokeLinecap="round" />
-              </svg>
-              <div className="text-center">
-                <div className="text-4xl font-black text-foreground tracking-tighter">82</div>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-primary mt-1">Score</div>
+          {/* Zone 1: Active Focus Session */}
+          <div className="rounded-2xl border border-slate-200/60 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+            <div className="mb-8 flex items-start justify-between">
+              <div>
+                <h3 className="mb-2 text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">Active Session</h3>
+                <p className="text-[20px] font-bold text-[#0b1c30]">System architecture</p>
+              </div>
+              <div className="flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-[12px] font-bold text-blue-600 shadow-sm">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75"></span>
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-600"></span>
+                </span>
+                Focus Mode Active
               </div>
             </div>
-            
-            <div className="mt-6 text-center z-10">
-              <div className="text-xs font-bold text-foreground">Momentum Signal</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1 font-semibold">Highly disciplined</div>
+            <div className="space-y-4">
+              <div className="flex justify-between text-[14px]">
+                <span className="font-semibold text-slate-500">75m planned</span>
+                <span className="font-bold text-blue-600">42m elapsed</span>
+              </div>
+              <div className="h-2.5 w-full overflow-hidden rounded-full border border-slate-200/80 bg-slate-50">
+                <div className="relative h-full w-[56%] overflow-hidden rounded-full bg-blue-600 shadow-[0_0_12px_rgba(37,99,235,0.6)]">
+                  <motion.div 
+                    initial={{ x: "-100%" }}
+                    animate={{ x: "200%" }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-0 h-full w-full -skew-x-12 transform bg-white/20" 
+                  />
+                </div>
+              </div>
             </div>
           </div>
-          
-          {/* Bottom Left: The Sequence */}
-          <div className="rounded-[1.5rem] border border-primary/5 bg-muted/30 p-5 sm:col-span-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Today's Sequence</div>
-              <div className="text-xs font-semibold text-muted-foreground/70">2/5 Done</div>
+
+          {/* Zone 2: Momentum Score */}
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-slate-200/60 bg-white p-8 text-center shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+            <div className="relative mb-6 h-36 w-36">
+              <svg className="h-full w-full -rotate-90 drop-shadow-md" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" fill="none" r="44" stroke="#eff4ff" strokeWidth="8" />
+                <circle cx="50" cy="50" fill="none" r="44" stroke="#2563eb" strokeDasharray="276" strokeDashoffset="50" strokeLinecap="round" strokeWidth="8" className="drop-shadow-[0_4px_6px_rgba(37,99,235,0.3)]" />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-[40px] font-extrabold tracking-tight text-[#0b1c30]">82</span>
+                <span className="mt-1 text-[11px] font-bold uppercase tracking-widest text-slate-500">Score</span>
+              </div>
+            </div>
+            <h4 className="mb-2 text-lg font-bold text-[#0b1c30]">Momentum Signal</h4>
+            <p className="rounded-full border border-blue-100 bg-blue-50 px-5 py-1.5 text-[14px] font-semibold text-blue-600 shadow-sm">Highly disciplined</p>
+          </div>
+
+          {/* Zone 3: Today's Sequence */}
+          <div className="rounded-2xl border border-slate-200/60 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+            <h3 className="mb-6 text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">Today's Sequence</h3>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 rounded-xl border border-blue-100 bg-blue-50/50 p-4 shadow-sm transition-colors">
+                <CheckCircle2 className="h-6 w-6 text-blue-600" />
+                <span className="text-[16px] font-semibold text-[#0b1c30]">Design review</span>
+              </div>
+              <div className="flex items-center gap-4 rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition-colors">
+                <Circle className="h-6 w-6 text-slate-400" />
+                <span className="text-[16px] font-medium text-[#0b1c30]">Team sync</span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition-colors">
+                <div className="flex items-center gap-4">
+                  <Dumbbell className="h-6 w-6 text-amber-600" />
+                  <span className="text-[16px] font-medium text-[#0b1c30]">Evening strength</span>
+                </div>
+                <span className="rounded bg-amber-50 px-2 py-1 text-[12px] font-bold text-amber-700">18:00</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Zone 4: Workspace Notes */}
+          <div className="flex flex-col rounded-2xl border border-slate-200/60 bg-white p-8 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+            <div className="mb-6 flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-600" />
+              <h3 className="text-[12px] font-bold uppercase tracking-[0.1em] text-slate-500">Workspace Notes</h3>
             </div>
             <div className="space-y-4">
-               {/* Completed Task */}
-               <div className="flex items-center gap-3 opacity-50">
-                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                   <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                 </div>
-                 <div className="flex-1 truncate text-sm font-medium text-foreground line-through decoration-muted-foreground/50">Morning sync & planning</div>
-               </div>
-               
-               {/* Active Task Marker */}
-               <div className="flex items-center gap-3">
-                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-500/20">
-                   <div className="h-2 w-2 rounded-full bg-indigo-500" />
-                 </div>
-                 <div className="flex-1 truncate text-sm font-bold text-foreground">System architecture</div>
-               </div>
-               
-               {/* Upcoming Task */}
-               <div className="flex items-center gap-3">
-                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-primary/20">
-                   <div className="h-1.5 w-1.5 rounded-full bg-primary/40" />
-                 </div>
-                 <div className="flex-1 truncate text-sm font-medium text-muted-foreground">Frontend alignment</div>
-               </div>
-               
-               {/* Fitness Task */}
-               <div className="flex items-center gap-3">
-                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-emerald-500/20 bg-emerald-500/10">
-                   <Dumbbell className="h-3 w-3 text-emerald-600 dark:text-emerald-500" />
-                 </div>
-                 <div className="flex-1 truncate text-sm font-medium text-emerald-700 dark:text-emerald-400/80">Zone 2 Run (45m)</div>
-               </div>
+              <h4 className="text-[20px] font-medium italic text-[#0b1c30] font-serif">Strategic Architecture</h4>
+              <ul className="space-y-2">
+                <li className="flex items-center gap-3 text-[16px] text-slate-600">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400"></span>
+                  Define core nodes
+                </li>
+                <li className="flex items-center gap-3 text-[16px] text-slate-600">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400"></span>
+                  Map execution flow
+                </li>
+                <li className="flex items-center gap-3 text-[16px] text-slate-600">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400"></span>
+                  Review hierarchy
+                </li>
+              </ul>
+              <div className="border-t border-slate-200/80 pt-4">
+                <details className="group" open>
+                  <summary className="flex cursor-pointer list-none items-center gap-2 text-[14px] font-semibold text-[#0b1c30]">
+                    <ChevronRight className="h-5 w-5 text-slate-400 transition-transform group-open:rotate-90" />
+                    Implementation Details
+                  </summary>
+                  <div className="pl-7 pt-2 text-[16px] text-slate-600 font-serif">
+                    Finalize 1px border audit
+                  </div>
+                </details>
+              </div>
             </div>
           </div>
-          
-          {/* Bottom Right: Status & Insights */}
-          <div className="grid gap-4 sm:col-span-7 sm:grid-cols-2">
-            <div className="flex flex-col justify-between rounded-[1.5rem] border border-emerald-500/15 bg-emerald-500/5 p-5 relative overflow-hidden group">
-               <div className="absolute -right-4 -top-4 opacity-10 transition-transform duration-500 group-hover:scale-110 group-hover:-translate-y-2">
-                 <Flame className="h-32 w-32 text-emerald-500" />
-               </div>
-               <div className="relative z-10">
-                 <div className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-500/70">Fitness Protocol</div>
-                 <div className="mt-2 text-3xl font-black text-emerald-600 dark:text-emerald-400">14 Day</div>
-                 <div className="text-xs font-semibold text-emerald-600/70 dark:text-emerald-500/60 mt-1 uppercase tracking-wider">unbroken streak</div>
-               </div>
-               <div className="relative z-10 mt-6 flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2 w-fit">
-                 <span className="flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                   <CheckCircle2 className="h-3.5 w-3.5" />
-                 </span>
-                 <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400">Protected today</span>
-               </div>
-            </div>
-            
-            <div className="flex flex-col justify-between rounded-[1.5rem] border border-primary/5 bg-muted/30 p-5">
-               <div className="flex items-center justify-between">
-                 <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Capacity</div>
-                 <Activity className="h-4 w-4 text-muted-foreground/50" />
-               </div>
-               
-               <div className="mt-4">
-                 <div className="flex items-baseline gap-1.5">
-                   <div className="text-3xl font-black text-foreground tracking-tighter">145</div>
-                   <div className="text-sm font-bold text-muted-foreground">min</div>
-                 </div>
-                 <div className="mt-1 text-xs font-semibold text-muted-foreground/60">remaining focus time</div>
-               </div>
-               
-               <div className="mt-6 flex h-8 gap-1.5 items-end">
-                 {[1, 0.8, 1, 0.9, 0.4, 0.1, 0].map((val, i) => (
-                   <div key={i} className="flex-1 rounded-sm bg-primary/10 overflow-hidden relative" style={{ height: '100%' }}>
-                     <div className="absolute bottom-0 w-full bg-primary rounded-sm transition-all" style={{ height: `${val * 100}%` }} />
-                   </div>
-                 ))}
-               </div>
-            </div>
-          </div>
-          
+
         </div>
       </motion.div>
-      
-      {/* Floating Decorative Elements for Depth */}
+
+      {/* Floating Decorative Elements */}
       <motion.div 
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0, y: [0, -6, 0] }}
-        transition={{ 
-          opacity: { delay: 1.2, duration: 0.8 },
-          x: { delay: 1.2, duration: 0.8 },
-          y: { duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1.5 }
-        }}
-        className="absolute -right-6 -top-6 z-20 hidden rounded-2xl border border-primary/10 bg-card/95 p-4 shadow-2xl backdrop-blur-xl sm:block"
+        animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute -left-8 -top-8 rounded-2xl border border-slate-200/60 bg-white p-5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.05)] z-20"
       >
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Zap className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-sm font-bold text-foreground">Execution tight</div>
-            <div className="text-xs font-medium text-muted-foreground">Estimates matching actuals</div>
-          </div>
-        </div>
+        <Zap className="h-6 w-6 text-amber-600 fill-current" />
+      </motion.div>
+      <motion.div 
+        animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        className="absolute -bottom-6 -right-6 rounded-2xl border border-slate-200/60 bg-white p-5 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.05)] z-20"
+      >
+        <Sparkles className="h-6 w-6 text-blue-600 fill-current" />
       </motion.div>
     </div>
   )

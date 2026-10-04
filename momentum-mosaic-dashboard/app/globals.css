@@ -547,6 +547,13 @@
     );
   }
 
+  /* ─── Premium Editor Surface ──────────────────── */
+  .premium-editor-surface {
+    background:
+      radial-gradient(color-mix(in oklch, var(--border), transparent 60%) 1px, transparent 1px) 0 0 / 24px 24px,
+      linear-gradient(180deg, color-mix(in oklch, var(--background), transparent 2%), var(--background));
+  }
+
   /* ─── Study Workspace Surface ──────────────────── */
   .study-surface-gradient {
     background:

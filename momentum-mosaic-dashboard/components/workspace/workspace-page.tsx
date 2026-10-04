@@ -26,6 +26,10 @@ import {
   X,
   Link2,
   PlayCircle,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
 } from "lucide-react"
 
 import { Dialog, DialogContent } from "@/components/ui/dialog"
@@ -458,6 +462,10 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
   const [topbarVisible, setTopbarVisible] = useState(true)
   // Section collapse state — persisted to localStorage
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(getCollapsedSections)
+  
+  // Sidebar panel collapse states
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false)
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false)
   // Inline new-section creation in sidebar
   const [newSectionMode, setNewSectionMode] = useState(false)
   const [newSectionDraft, setNewSectionDraft] = useState("")
@@ -1136,18 +1144,32 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
   const navigationSurface = (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="border-b border-border/70 px-5 py-4">
-        <p className="text-xs font-semibold text-muted-foreground">
-          Study Workspace
-        </p>
-        <h2 className="mt-1 text-base font-semibold tracking-tight text-foreground">One calm place to work</h2>
+      <div className={cn("flex items-center border-b border-border/70 py-4", leftSidebarCollapsed ? "justify-center px-2" : "justify-between px-5")}>
+        {!leftSidebarCollapsed && (
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground">
+              Study Workspace
+            </p>
+            <h2 className="mt-1 text-base font-semibold tracking-tight text-foreground">One calm place to work</h2>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setLeftSidebarCollapsed(!leftSidebarCollapsed)}
+          className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted transition-colors"
+          title={leftSidebarCollapsed ? "Expand navigation" : "Collapse navigation"}
+        >
+          {leftSidebarCollapsed ? <PanelLeftOpen className="h-4 w-4 text-muted-foreground" /> : <PanelLeftClose className="h-4 w-4 text-muted-foreground" />}
+        </button>
       </div>
 
       {/* Workspace list */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        {workspaceGroups.length === 0 && (
-          <p className="px-1 text-sm text-muted-foreground/50">No workspaces yet.</p>
-        )}
+      {!leftSidebarCollapsed && (
+        <>
+          <div className="flex-1 overflow-y-auto px-4 py-4">
+            {workspaceGroups.length === 0 && (
+              <p className="px-1 text-sm text-muted-foreground/50">No workspaces yet.</p>
+            )}
 
         {workspaceGroups.map((group) => {
           const isCollapsed = collapsedSections.has(group.id)
@@ -1361,278 +1383,320 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
           router.push(`/workspace/${ws.id}`)
         }}
       />
+        </>
+      )}
+
+      {leftSidebarCollapsed && (
+        <div 
+          className="flex-1 flex flex-col items-center pt-8 pb-4 cursor-pointer text-muted-foreground/40 hover:text-foreground/70 transition-colors"
+          onClick={() => setLeftSidebarCollapsed(false)}
+          title="Expand navigation"
+        >
+          <span className="text-xs font-bold tracking-[0.2em] uppercase" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+            Workspaces
+          </span>
+        </div>
+      )}
     </div>
   )
 
   const contextSurface = (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border/70 px-5 py-4">
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground">Workspace Context</p>
-          <h2 className="mt-1 text-base font-semibold tracking-tight text-foreground">Next useful action</h2>
-        </div>
-        <button
-          type="button"
-          className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted transition-colors"
-          onClick={(e) => {
-            e.preventDefault()
-            setResourceDialogOpen(true)
-          }}
-        >
-          <Plus className="h-4 w-4 text-primary/70" />
-        </button>
-      </div>
-
-      <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
-
-        {/* Resources section */}
-        <section className="space-y-4 border-t border-border/60 pt-5">
-          <div className="flex items-center justify-between text-primary">
-            <div className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              <h4 className="text-sm font-bold uppercase tracking-wider">Resources</h4>
-            </div>
-            <span className="text-xs font-medium text-muted-foreground opacity-70">
-              {workspace?.resources.length ?? 0}
-            </span>
+      <div className={cn("flex items-center border-b border-border/70 py-4", rightSidebarCollapsed ? "justify-center px-2" : "justify-between px-5")}>
+        {!rightSidebarCollapsed && (
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground">Workspace Context</p>
+            <h2 className="mt-1 text-base font-semibold tracking-tight text-foreground">Next useful action</h2>
           </div>
-          
-          <div className="space-y-2">
-            {workspace && workspace.resources.length > 0 ? (
-              workspace.resources
-                .slice()
-                .sort(compareByOrderIndex)
-                .map((resource) => {
-                  const videoId = getYoutubeVideoId(resource.url)
-                  const isYoutube = videoId !== null
-                  let displayTitle = resource.label
-                  if (!displayTitle) {
-                    try {
-                      displayTitle = new URL(resource.url).hostname.replace(/^www\./, '')
-                    } catch {
-                      displayTitle = "Link"
-                    }
-                  }
-
-                  let hostname = ""
-                  try {
-                    hostname = new URL(resource.url).hostname.replace(/^www\./, '')
-                  } catch {
-                    hostname = "Link"
-                  }
-
-                  const standardCard = (
-                    <div className="flex items-center gap-3 p-3 bg-surface-container-low dark:bg-muted/10 rounded-lg border border-outline-variant/30 hover:border-primary transition-colors cursor-pointer group">
-                      <div className={cn("w-10 h-10 rounded flex items-center justify-center shrink-0", isYoutube ? "bg-red-100 dark:bg-red-950/40 text-red-600" : "bg-surface-container-highest dark:bg-muted/30 text-muted-foreground")}>
-                        {isYoutube ? <PlayCircle className="w-5 h-5" /> : <FaviconWithFallback url={resource.url} hostname={hostname} className="w-5 h-5" />}
-                      </div>
-                      <div className="flex-grow min-w-0">
-                        <p className="text-sm font-bold text-foreground truncate">{displayTitle}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{hostname}</p>
-                      </div>
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <a
-                          href={resource.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted transition-colors"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors" />
-                        </a>
-                        <button
-                          type="button"
-                          className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted transition-colors"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            e.stopPropagation()
-                            void handleDeleteResource(resource.id)
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive transition-colors" />
-                        </button>
-                      </div>
-                    </div>
-                  )
-
-                  return (
-                    <HoverCard key={resource.id} openDelay={300} closeDelay={150}>
-                      <HoverCardTrigger asChild>
-                        <div>{standardCard}</div>
-                      </HoverCardTrigger>
-                      <HoverCardContent side="left" align="start" sideOffset={12} className="w-72 overflow-hidden rounded-xl p-3 shadow-lg">
-                        {isYoutube ? (
-                          <div className="space-y-3">
-                            <div
-                              className="relative aspect-video w-full overflow-hidden rounded-xl cursor-pointer shadow-sm border border-black/5 dark:border-white/5"
-                              onClick={() => setActiveVideoId(videoId)}
-                            >
-                              <img
-                                src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
-                                alt={displayTitle}
-                                className="h-full w-full object-cover"
-                              />
-                              <div className="absolute inset-0 bg-black/20 flex items-center justify-center transition-colors hover:bg-black/30">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-md backdrop-blur-sm">
-                                  <Play className="h-4.5 w-4.5 text-red-600 fill-red-600 ml-0.5" />
-                                </div>
-                              </div>
-                            </div>
-                            <div>
-                              <h4 className="line-clamp-3 text-sm font-semibold text-foreground leading-snug">{displayTitle}</h4>
-                              <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-                                <Youtube className="h-3.5 w-3.5 text-red-500" />
-                                YouTube Video
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="space-y-2.5">
-                            <h4 className="line-clamp-4 text-sm font-semibold text-foreground leading-snug">{displayTitle}</h4>
-
-                            {(() => {
-                              const lower = hostname.toLowerCase();
-                              let BadgeIcon = null;
-                              let badgeText = "";
-                              let badgeClass = "";
-
-                              if (lower.includes("chatgpt.com") || lower.includes("claude.ai") || lower.includes("perplexity.ai")) {
-                                BadgeIcon = Brain;
-                                badgeText = "AI Assistant";
-                                badgeClass = "bg-purple-500/10 text-purple-600 dark:text-purple-400";
-                              } else if (lower.includes("github.com") || lower.includes("stackoverflow.com")) {
-                                BadgeIcon = Github;
-                                badgeText = "Development";
-                                badgeClass = "bg-blue-500/10 text-blue-600 dark:text-blue-400";
-                              } else if (lower.includes("figma.com") || lower.includes("dribbble.com")) {
-                                BadgeIcon = Figma;
-                                badgeText = "Design";
-                                badgeClass = "bg-pink-500/10 text-pink-600 dark:text-pink-400";
-                              } else if (lower.includes("medium.com")) {
-                                BadgeIcon = BookOpen;
-                                badgeText = "Article";
-                                badgeClass = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
-                              }
-
-                              if (BadgeIcon) {
-                                return (
-                                  <div className="flex items-center">
-                                    <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold", badgeClass)}>
-                                      <BadgeIcon className="h-3 w-3" /> {badgeText}
-                                    </span>
-                                  </div>
-                                );
-                              }
-                              return null;
-                            })()}
-
-                            <div className="flex items-start gap-2 text-xs text-muted-foreground break-all whitespace-normal bg-muted/50 p-2 rounded-lg">
-                              <FaviconWithFallback url={resource.url} hostname={hostname} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                              <span className="opacity-80 line-clamp-3 leading-relaxed">{resource.url}</span>
-                            </div>
-                          </div>
-                        )}
-                      </HoverCardContent>
-                    </HoverCard>
-                  )
-                })
-            ) : (
-              <div className="py-6 px-4 text-center border-2 border-dashed border-outline-variant/30 rounded-lg">
-                <div className="w-12 h-12 bg-surface-container mx-auto rounded-full flex items-center justify-center mb-3">
-                  <Link2 className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <p className="text-sm font-semibold text-foreground">No resources yet</p>
-                <p className="text-xs text-muted-foreground mt-1 mb-4">Add links, videos, or documents</p>
-              </div>
-            )}
-            
+        )}
+        <div className="flex gap-1 items-center">
+          {!rightSidebarCollapsed && (
             <button
               type="button"
-              className="w-full py-3 mt-2 border-2 border-dashed border-outline-variant/60 rounded-lg flex items-center justify-center gap-2 text-muted-foreground text-sm font-semibold hover:bg-surface-container-low hover:border-primary hover:text-primary transition-all"
-              onClick={() => setResourceDialogOpen(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted transition-colors"
+              onClick={(e) => {
+                e.preventDefault()
+                setResourceDialogOpen(true)
+              }}
             >
-              <Link2 className="h-[18px] w-[18px]" />
-              Add New Resource
+              <Plus className="h-4 w-4 text-primary/70" />
             </button>
-          </div>
-        </section>
+          )}
+          <button
+            type="button"
+            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted transition-colors"
+            onClick={() => setRightSidebarCollapsed(!rightSidebarCollapsed)}
+            title={rightSidebarCollapsed ? "Expand context" : "Collapse context"}
+          >
+            {rightSidebarCollapsed ? <PanelRightOpen className="h-4 w-4 text-muted-foreground" /> : <PanelRightClose className="h-4 w-4 text-muted-foreground" />}
+          </button>
+        </div>
+      </div>
 
-        {/* Workspace Tasks */}
-        <section className="px-4 py-6 border-t border-border/5">
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Workspace Tasks</h3>
-            <button
-              className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-muted transition-colors text-muted-foreground"
-              onClick={() => setTaskDialogOpen(true)}
-              title="Add task"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
-          </div>
+      {!rightSidebarCollapsed && (
+        <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
 
-          <div className="space-y-2.5">
-            {workspaceTasks.length > 0 ? (
-              workspaceTasks.map((task) => {
-                if (task.status === "IN_PROGRESS") {
-                  return (
-                    <div key={task.id} className="p-4 bg-surface-container dark:bg-muted/10 rounded-lg border border-teal-500/30 shadow-sm relative overflow-hidden group transition-all">
-                      <div className="flex justify-between items-start mb-1 relative z-10">
-                        <p className="text-sm font-bold text-primary dark:text-teal-400 truncate max-w-[120px]">{task.title}</p>
-                        <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 text-[10px] font-bold rounded-full flex items-center gap-1 shadow-sm">
-                            <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-pulse shadow-[0_0_4px_rgba(20,184,166,0.8)]"></span> Current Focus
-                          </span>
-                          <button 
-                            className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => handleAbandonTask(task.id)}
-                            title="Abandon task"
+          {/* Resources section */}
+          <section className="space-y-4 border-t border-border/60 pt-5">
+            <div className="flex items-center justify-between text-primary">
+              <div className="flex items-center gap-2">
+                <BookOpen className="h-5 w-5" />
+                <h4 className="text-sm font-bold uppercase tracking-wider">Resources</h4>
+              </div>
+              <span className="text-xs font-medium text-muted-foreground opacity-70">
+                {workspace?.resources.length ?? 0}
+              </span>
+            </div>
+            
+            <div className="space-y-2">
+              {workspace && workspace.resources.length > 0 ? (
+                workspace.resources
+                  .slice()
+                  .sort(compareByOrderIndex)
+                  .map((resource) => {
+                    const videoId = getYoutubeVideoId(resource.url)
+                    const isYoutube = videoId !== null
+                    let displayTitle = resource.label
+                    if (!displayTitle) {
+                      try {
+                        displayTitle = new URL(resource.url).hostname.replace(/^www\./, '')
+                      } catch {
+                        displayTitle = "Link"
+                      }
+                    }
+
+                    let hostname = ""
+                    try {
+                      hostname = new URL(resource.url).hostname.replace(/^www\./, '')
+                    } catch {
+                      hostname = "Link"
+                    }
+
+                    const standardCard = (
+                      <div className="flex items-center gap-3 p-3 bg-surface-container-low dark:bg-muted/10 rounded-lg border border-outline-variant/30 hover:border-primary transition-colors cursor-pointer group">
+                        <div className={cn("w-10 h-10 rounded flex items-center justify-center shrink-0", isYoutube ? "bg-red-100 dark:bg-red-950/40 text-red-600" : "bg-surface-container-highest dark:bg-muted/30 text-muted-foreground")}>
+                          {isYoutube ? <PlayCircle className="w-5 h-5" /> : <FaviconWithFallback url={resource.url} hostname={hostname} className="w-5 h-5" />}
+                        </div>
+                        <div className="flex-grow min-w-0">
+                          <p className="text-sm font-bold text-foreground truncate">{displayTitle}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{hostname}</p>
+                        </div>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <a
+                            href={resource.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted transition-colors"
+                            onClick={(e) => e.stopPropagation()}
                           >
-                            <X className="h-4 w-4" />
+                            <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-primary transition-colors" />
+                          </a>
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded-md hover:bg-muted transition-colors"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              void handleDeleteResource(resource.id)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive transition-colors" />
                           </button>
                         </div>
                       </div>
-                      <p className="text-[10px] text-primary/70 dark:text-teal-400/70 uppercase tracking-tighter relative z-10">
-                        {task.taskType} • {task.durationMinutes}M
-                      </p>
-                    </div>
-                  )
-                }
+                    )
 
-                return (
-                  <div key={task.id} className="group relative flex flex-col gap-2 rounded-xl border border-muted/30 bg-muted/10 p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{task.title}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">
-                          {task.taskType} • {task.durationMinutes}m
+                    return (
+                      <HoverCard key={resource.id} openDelay={300} closeDelay={150}>
+                        <HoverCardTrigger asChild>
+                          <div>{standardCard}</div>
+                        </HoverCardTrigger>
+                        <HoverCardContent side="left" align="start" sideOffset={12} className="w-72 overflow-hidden rounded-xl p-3 shadow-lg">
+                          {isYoutube ? (
+                            <div className="space-y-3">
+                              <div
+                                className="relative aspect-video w-full overflow-hidden rounded-xl cursor-pointer shadow-sm border border-black/5 dark:border-white/5"
+                                onClick={() => setActiveVideoId(videoId)}
+                              >
+                                <img
+                                  src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
+                                  alt={displayTitle}
+                                  className="h-full w-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center transition-colors hover:bg-black/30">
+                                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/95 shadow-md backdrop-blur-sm">
+                                    <Play className="h-4.5 w-4.5 text-red-600 fill-red-600 ml-0.5" />
+                                  </div>
+                                </div>
+                              </div>
+                              <div>
+                                <h4 className="line-clamp-3 text-sm font-semibold text-foreground leading-snug">{displayTitle}</h4>
+                                <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                                  <Youtube className="h-3.5 w-3.5 text-red-500" />
+                                  YouTube Video
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-2.5">
+                              <h4 className="line-clamp-4 text-sm font-semibold text-foreground leading-snug">{displayTitle}</h4>
+
+                              {(() => {
+                                const lower = hostname.toLowerCase();
+                                let BadgeIcon = null;
+                                let badgeText = "";
+                                let badgeClass = "";
+
+                                if (lower.includes("chatgpt.com") || lower.includes("claude.ai") || lower.includes("perplexity.ai")) {
+                                  BadgeIcon = Brain;
+                                  badgeText = "AI Assistant";
+                                  badgeClass = "bg-purple-500/10 text-purple-600 dark:text-purple-400";
+                                } else if (lower.includes("github.com") || lower.includes("stackoverflow.com")) {
+                                  BadgeIcon = Github;
+                                  badgeText = "Development";
+                                  badgeClass = "bg-blue-500/10 text-blue-600 dark:text-blue-400";
+                                } else if (lower.includes("figma.com") || lower.includes("dribbble.com")) {
+                                  BadgeIcon = Figma;
+                                  badgeText = "Design";
+                                  badgeClass = "bg-pink-500/10 text-pink-600 dark:text-pink-400";
+                                } else if (lower.includes("medium.com")) {
+                                  BadgeIcon = BookOpen;
+                                  badgeText = "Article";
+                                  badgeClass = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+                                }
+
+                                if (BadgeIcon) {
+                                  return (
+                                    <div className="flex items-center">
+                                      <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold", badgeClass)}>
+                                        <BadgeIcon className="h-3 w-3" /> {badgeText}
+                                      </span>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
+
+                              <div className="flex items-start gap-2 text-xs text-muted-foreground break-all whitespace-normal bg-muted/50 p-2 rounded-lg">
+                                <FaviconWithFallback url={resource.url} hostname={hostname} className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                                <span className="opacity-80 line-clamp-3 leading-relaxed">{resource.url}</span>
+                              </div>
+                            </div>
+                          )}
+                        </HoverCardContent>
+                      </HoverCard>
+                    )
+                  })
+              ) : (
+                <div className="py-6 px-4 text-center border-2 border-dashed border-outline-variant/30 rounded-lg">
+                  <div className="w-12 h-12 bg-surface-container mx-auto rounded-full flex items-center justify-center mb-3">
+                    <Link2 className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">No resources yet</p>
+                  <p className="text-xs text-muted-foreground mt-1 mb-4">Add links, videos, or documents</p>
+                </div>
+              )}
+              
+              <button
+                type="button"
+                className="w-full py-3 mt-2 border-2 border-dashed border-outline-variant/60 rounded-lg flex items-center justify-center gap-2 text-muted-foreground text-sm font-semibold hover:bg-surface-container-low hover:border-primary hover:text-primary transition-all"
+                onClick={() => setResourceDialogOpen(true)}
+              >
+                <Link2 className="h-[18px] w-[18px]" />
+                Add New Resource
+              </button>
+            </div>
+          </section>
+
+          {/* Workspace Tasks */}
+          <section className="px-4 py-6 border-t border-border/5">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Workspace Tasks</h3>
+              <button
+                className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-muted transition-colors text-muted-foreground"
+                onClick={() => setTaskDialogOpen(true)}
+                title="Add task"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {workspaceTasks.length > 0 ? (
+                workspaceTasks.map((task) => {
+                  if (task.status === "IN_PROGRESS") {
+                    return (
+                      <div key={task.id} className="p-4 bg-surface-container dark:bg-muted/10 rounded-lg border border-teal-500/30 shadow-sm relative overflow-hidden group transition-all">
+                        <div className="flex justify-between items-start mb-1 relative z-10">
+                          <p className="text-sm font-bold text-primary dark:text-teal-400 truncate max-w-[120px]">{task.title}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 bg-teal-50 dark:bg-teal-950/40 border border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-400 text-[10px] font-bold rounded-full flex items-center gap-1 shadow-sm">
+                              <span className="w-1.5 h-1.5 bg-teal-500 rounded-full animate-pulse shadow-[0_0_4px_rgba(20,184,166,0.8)]"></span> Current Focus
+                            </span>
+                            <button 
+                              className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleAbandonTask(task.id)}
+                              title="Abandon task"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-primary/70 dark:text-teal-400/70 uppercase tracking-tighter relative z-10">
+                          {task.taskType} • {task.durationMinutes}M
                         </p>
                       </div>
-                      {task.status === "COMPLETED" ? (
-                        <div className="flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2 py-0.5">
-                          <span className="text-[10px] font-medium text-indigo-500">Done</span>
+                    )
+                  }
+
+                  return (
+                    <div key={task.id} className="group relative flex flex-col gap-2 rounded-xl border border-muted/30 bg-muted/10 p-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-foreground truncate">{task.title}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">
+                            {task.taskType} • {task.durationMinutes}m
+                          </p>
                         </div>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-6 px-2 text-xs"
-                          onClick={() => handleStartTask(task.id)}
-                        >
-                          Start
-                        </Button>
-                      )}
+                        {task.status === "COMPLETED" ? (
+                          <div className="flex items-center gap-1.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 px-2 py-0.5">
+                            <span className="text-[10px] font-medium text-indigo-500">Done</span>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => handleStartTask(task.id)}
+                          >
+                            Start
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )
-              })
-            ) : (
-              <div className="px-1 py-1">
-                <p className="text-sm text-muted-foreground">No tasks linked.</p>
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
+                  )
+                })
+              ) : (
+                <div className="px-1 py-1">
+                  <p className="text-sm text-muted-foreground">No tasks linked.</p>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {rightSidebarCollapsed && (
+        <div 
+          className="flex-1 flex flex-col items-center pt-8 pb-4 cursor-pointer text-muted-foreground/40 hover:text-foreground/70 transition-colors"
+          onClick={() => setRightSidebarCollapsed(false)}
+          title="Expand context"
+        >
+          <span className="text-xs font-bold tracking-[0.2em] uppercase" style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+            Context
+          </span>
+        </div>
+      )}
     </div>
   )
 
@@ -1656,7 +1720,15 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
         ) : workspace ? (
           <>
             <div className="mx-auto max-w-[88rem] px-4 py-5 sm:px-6 lg:px-8">
-              <div className="grid gap-5 lg:grid-cols-[17rem_minmax(0,1fr)_18rem]">
+              <div 
+                className={cn(
+                  "grid gap-5 transition-all duration-300 ease-in-out",
+                  leftSidebarCollapsed && rightSidebarCollapsed && "lg:grid-cols-[60px_minmax(0,1fr)_60px]",
+                  leftSidebarCollapsed && !rightSidebarCollapsed && "lg:grid-cols-[60px_minmax(0,1fr)_18rem]",
+                  !leftSidebarCollapsed && rightSidebarCollapsed && "lg:grid-cols-[17rem_minmax(0,1fr)_60px]",
+                  !leftSidebarCollapsed && !rightSidebarCollapsed && "lg:grid-cols-[17rem_minmax(0,1fr)_18rem]"
+                )}
+              >
                 {!isMobile && (
                   <aside className="workspace-panel overflow-hidden rounded-xl">
                     {navigationSurface}
@@ -1664,7 +1736,7 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
                 )}
 
                 <section className={cn(
-                  "workspace-editor-shell relative min-w-0 rounded-2xl transition-all duration-700 overflow-hidden",
+                  "workspace-editor-shell premium-editor-surface relative min-w-0 rounded-2xl transition-all duration-300 overflow-hidden border border-border/50 shadow-sm",
                   inProgressTask ? "border-teal-500/30 shadow-[0_0_40px_-15px_rgba(20,184,166,0.15)]" : ""
                 )}>
                   {inProgressTask && (
@@ -1926,29 +1998,62 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
       {(deepWritingMode || isExitingDeepMode) && workspace && (
         <div
           className={cn(
-            "deep-writing-overlay",
+            "deep-writing-overlay premium-editor-surface relative",
             isExitingDeepMode && "deep-writing-overlay--exiting"
           )}
         >
+          {inProgressTask && (
+            <>
+              {/* Cinematic ambient glow for active task */}
+              <div className="absolute top-0 left-0 w-full h-40 bg-gradient-to-b from-teal-500/10 via-teal-500/5 to-transparent pointer-events-none" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-full max-h-[80vh] bg-teal-500/5 blur-[120px] rounded-full animate-[breathing-glow_6s_ease-in-out_infinite] pointer-events-none -z-10" />
+              {/* Vignette to focus attention */}
+              <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_150px_rgba(0,0,0,0.03)] dark:shadow-[inset_0_0_150px_rgba(0,0,0,0.2)]" />
+            </>
+          )}
+
           {/* Auto-hiding topbar */}
           <div
             className={cn(
-              "deep-writing-topbar",
+              "deep-writing-topbar backdrop-blur-md bg-background/50 border-b border-border/30",
               !topbarVisible && !isExitingDeepMode && "deep-writing-topbar--hidden"
             )}
           >
-            <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/40">
-                {workspace.sectionName || "Study Workspace"}
-              </p>
-              <h2 className="mt-0.5 truncate text-base font-bold tracking-tight text-foreground/60">
-                {workspace.title}
-              </h2>
+            <div className="min-w-0 flex items-center gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">
+                  {workspace.sectionName || "Study Workspace"}
+                </p>
+                <h2 className="mt-0.5 truncate text-base font-bold tracking-tight text-foreground/80">
+                  {inProgressTask ? inProgressTask.title : workspace.title}
+                </h2>
+              </div>
+              
+              {inProgressTask && (
+                <div className="flex items-center gap-3 bg-surface-container dark:bg-muted/40 rounded-full px-4 py-1.5 border border-teal-500/20 shadow-sm ml-4">
+                  <span className="relative flex h-2.5 w-2.5 mr-1">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-teal-500"></span>
+                  </span>
+                  <span className="text-sm font-bold text-teal-600 dark:text-teal-400 tabular-nums tracking-wide">
+                    {formatElapsed(elapsed)}
+                  </span>
+                  <div className="w-px h-4 bg-outline-variant/40 mx-1"></div>
+                  <button 
+                    className="text-muted-foreground hover:text-teal-600 transition-colors flex items-center justify-center" 
+                    title="Complete task"
+                    onClick={() => handleCompleteTask(inProgressTask.id)}
+                  >
+                    <CheckCircle className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
             </div>
+            
             <button
               type="button"
               onClick={handleExitDeepMode}
-              className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground/40 transition-all duration-200 hover:text-muted-foreground/70 hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+              className="flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground transition-all duration-200 hover:text-foreground hover:bg-muted border border-transparent hover:border-border/50 shadow-sm"
               title="Exit deep writing"
             >
               <Minimize2 className="h-4 w-4" />
@@ -1956,10 +2061,15 @@ export function WorkspacePage({ workspaceId }: WorkspacePageProps) {
           </div>
 
           {/* Scrollable writing surface */}
-          <div className="deep-writing-scroll" ref={deepWriteScrollRef}>
-            <div className="deep-writing-column">
+          <div className="deep-writing-scroll relative z-10" ref={deepWriteScrollRef}>
+            <div className={cn(
+              "deep-writing-column mt-8 mb-16 rounded-2xl transition-all duration-500",
+              inProgressTask 
+                ? "bg-background/40 backdrop-blur-md shadow-[0_0_60px_-15px_rgba(20,184,166,0.15)] border border-teal-500/20" 
+                : "bg-background/60 backdrop-blur-sm shadow-xl border border-border/50"
+            )}>
               <div
-                className="py-4"
+                className="py-10 px-8 sm:px-12"
                 onClick={(e) => {
                   if (e.target === e.currentTarget) {
                     void handleCreateEntry(null, "BULLET")
