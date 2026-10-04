@@ -1,70 +1,67 @@
 # Study Workspace
 
-## Purpose
+## 1. Purpose
 
-The Study Workspace is a focused room for learning work. It gives the user the materials, notes, and session context needed to execute a study block without leaving Momentum Mosaic.
+The **Study Workspace** is a dedicated, distraction-free environment for intense learning and deep execution. It provides everything needed for an active study block—notes, references, and an integrated session timer—directly inside Momentum Mosaic without cognitive fragmentation.
 
-## Philosophy
+---
 
-The Study Workspace is for execution, not curation.
+## 2. Core Philosophy
 
-It should feel like a quiet library carrel: a place to sit down, focus, learn, write, and leave a useful trace. It must not become a second brain or knowledge management database.
+**Execution over Curation**: The workspace is designed like a quiet library carrel where you sit down to do hard, uninterrupted work. It is deliberately **not** a personal knowledge management (PKM) tool, second brain, or Notion-style document garden.
 
-## Canonical Terms
+The mental model is session-centric:
+- The user enters a workspace to execute a focused block of work.
+- The notes and links exist solely to support the active learning block.
+- Upon finishing, the user logs completed focus time, leaving a crisp artifact of their thinking.
 
-- Study Workspace
-- Subject
-- Workspace
-- Context Resources
-- Study Session
-- Study Reflection
-- Scratchpad
+---
 
-## Current Behavior
+## 3. Canonical Domain Model
 
-The backend MVP is implemented with a bounded hierarchy: `WorkspaceSection` -> `Workspace` -> `WorkspaceEntry` and `WorkspaceResource`. Notes (`WorkspaceEntry`) are strictly plain text to enforce execution over curation. Users can manage resources to keep sessions self-contained. The frontend is meant to connect these workspaces to DEEP Focus Sessions.
+The Study Workspace follows a bounded three-tier hierarchy:
 
-## Boundaries
+1. **WorkspaceSection (`WorkspaceSection`)**: High-level topical domain (e.g., *"Distributed Systems"*, *"DSA & Algorithms"*, *"System Design"*).
+2. **Workspace (`Workspace`)**: The execution container for a specific topic or project (e.g., *"Raft Consensus Protocol"*).
+3. **WorkspaceEntry (`WorkspaceEntry`)**: Structured, plain-text execution blocks:
+   - `entryType = BULLET`: Direct, indented bullet points with keyboard-driven tab/shift-tab nesting and autosave.
+   - `entryType = TOGGLE`: Collapsible note sections for deep explanations, code snippets, or drill-down notes.
+   - Entries support persistent sort ordering (`sortOrder`) and hierarchical parent-child relationships (`parentEntryId`).
+4. **WorkspaceResource (`WorkspaceResource`)**: References and external context materials:
+   - Types: `DOCUMENTATION`, `ARTICLE`, `GITHUB`, `AI_CHAT`, `OTHER`.
+   - **Real-time Web Scraper (`UrlMetadataService`)**: When a user pastes a URL, backend Jsoup fetches and extracts the page `<title>`. Links from ChatGPT, Claude, and GitHub are automatically classified with custom badge styling.
 
-The Study Workspace must not become:
+---
 
-- Notion
-- a knowledge graph
-- a block database
-- a wiki
-- a nested folder system beyond a simple hierarchy
-- a rich media gallery
-- an everything dashboard
+## 4. Key UI/UX Capabilities
 
-Notes exist to support execution. Resources exist to keep the current session self-contained.
+### 4.1 Tri-Pane Responsive Layout
+- **Left Panel (Navigation & Workspace Hierarchy)**: Sections and workspaces list. Collapsible to 60px mini-strip to maximize writing canvas.
+- **Center Canvas (Writing Surface)**: Clean, high-contrast typography optimized for readability and fast typing. Seamless hotkeys for adding bullets (`Enter`), indenting (`Tab`), un-indenting (`Shift+Tab`), and toggling blocks (`Space` or click).
+- **Right Panel (Context & Resources)**: Collapsible sidebar housing active resources, external links, linked tasks, and session statistics.
 
-## Relationships
+### 4.2 Deep Writing Mode (Distraction-Free Focus)
+- Fullscreen immersive execution canvas triggered via hotkey or UI action.
+- **Ambient Focus Glow**: Cinematic teal ambient backlighting linked to the active task state.
+- **Auto-Hiding Topbar**: Navigation and controls smoothly recede during writing and reappear on mouse movement.
+- **Integrated Focus Heartbeat**: Active focus timer stays anchored in the top header, providing uninterrupted awareness of elapsed focus time.
+- **One-Click Completion**: Mark the active deep task complete directly from the deep writing overlay.
 
-- Task System supplies DEEP study tasks.
-- Focus System can launch a Study Session from the workspace.
-- Momentum Tracking benefits from completed DEEP work.
-- Reflections may capture what the user understood or remains confused about.
+---
 
-## Future Direction
+## 5. Architectural Boundaries & Anti-Patterns
 
-Implemented MVP:
+| What We Strictly Avoid | Rationale |
+|---|---|
+| Rich-Text / WYSIWYG Editors | Prevents users from wasting time adjusting fonts, colors, and layouts instead of writing thoughts. |
+| Graph Views & Bi-directional Links | Prevents wiki-gardening procrastination. |
+| Unlimited Nested Folders | Flat 2-level hierarchy (`Section -> Workspace`) eliminates organizational decision paralysis. |
+| Embedded Media Scrapbooking | Keeps queries light, storage lean, and attention centered on text. |
 
-- bounded `WorkspaceSection` -> `Workspace` structure
-- strictly plain text `WorkspaceEntry` (notes)
-- `WorkspaceResource` (context links)
-- connection to DEEP Focus Sessions (planned frontend UI)
+---
 
-Later:
+## 6. Integrations
 
-- Study Reflection at session end
-- lightweight scratchpad/canvas if it supports thinking without turning into a whiteboard product
-
-## AI Guidance
-
-When changing this feature:
-
-- Optimize for active learning and flow continuity.
-- Keep notes constrained.
-- Avoid folder/tag/link expansion.
-- Do not add graph views or block-editor complexity.
-- Keep the focus session visually connected to the study context when possible.
+- **Task System**: Tasks can be explicitly linked to a workspace (`task.workspaceId`). When a task is started from the workspace, the workspace enters active session mode.
+- **Focus System**: Focus timer ticks seamlessly whether in the general workspace or inside Deep Writing mode.
+- **Momentum Engine**: Time logged during workspace deep sessions feeds directly into the Momentum Calculator's Deep Focus signal.
